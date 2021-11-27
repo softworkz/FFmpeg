@@ -674,7 +674,7 @@ static int64_t guess_status_pts(AVFilterContext *ctx, int status, AVRational lin
     return AV_NOPTS_VALUE;
 }
 
-static int request_frame_to_filter(AVFilterLink *link)
+static int request_frame_to_filter(AVFilterLink *link, int input_index)
 {
     FilterLinkInternal * const li = ff_link_internal(link);
     int ret = -1;
@@ -684,8 +684,8 @@ static int request_frame_to_filter(AVFilterLink *link)
     li->frame_blocked_in = 1;
     if (link->srcpad->request_frame)
         ret = link->srcpad->request_frame(link);
-    else if (link->src->inputs[0])
-        ret = ff_request_frame(link->src->inputs[0]);
+    else if (link->src->inputs[input_index])
+        ret = ff_request_frame(link->src->inputs[input_index]);
     if (ret < 0) {
         if (ret != AVERROR(EAGAIN) && ret != li->status_in)
             ff_avfilter_link_set_in_status(link, ret, guess_status_pts(link->src, ret, link->time_base));
@@ -1372,6 +1372,14 @@ static int forward_status_change(AVFilterContext *filter, FilterLinkInternal *li
     AVFilterLink *in = &li_in->l.pub;
     unsigned out = 0, progress = 0;
     int ret;
+    int input_index = 0;
+
+    for (int i = 0; i < in->dst->nb_inputs; i++) {
+        if (&in->dst->input_pads[i] == in->dstpad) {
+            input_index = i;
+            break;
+        }
+    }
 
     av_assert0(!li_in->status_out);
     if (!filter->nb_outputs) {
@@ -1383,7 +1391,7 @@ static int forward_status_change(AVFilterContext *filter, FilterLinkInternal *li
 
         if (!li_out->status_in) {
             progress++;
-            ret = request_frame_to_filter(filter->outputs[out]);
+            ret = request_frame_to_filter(filter->outputs[out], input_index);
             if (ret < 0)
                 return ret;
         }
@@ -1432,13 +1440,13 @@ static int filter_activate_default(AVFilterContext *filter)
         FilterLinkInternal * const li = ff_link_internal(filter->outputs[i]);
         if (li->frame_wanted_out &&
             !li->frame_blocked_in) {
-            return request_frame_to_filter(filter->outputs[i]);
+            return request_frame_to_filter(filter->outputs[i], 0);
         }
     }
     for (i = 0; i < filter->nb_outputs; i++) {
         FilterLinkInternal * const li = ff_link_internal(filter->outputs[i]);
         if (li->frame_wanted_out)
-            return request_frame_to_filter(filter->outputs[i]);
+            return request_frame_to_filter(filter->outputs[i], 0);
     }
     if (!filter->nb_outputs) {
         ff_inlink_request_frame(filter->inputs[0]);
