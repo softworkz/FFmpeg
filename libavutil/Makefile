@@ -86,6 +86,7 @@ HEADERS = adler32.h                                                     \
           sha512.h                                                      \
           spherical.h                                                   \
           stereo3d.h                                                    \
+          subfmt.h                                                      \
           tdrdi.h                                                       \
           threadmessage.h                                               \
           time.h                                                        \
