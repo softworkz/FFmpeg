@@ -83,6 +83,15 @@ typedef struct BufferSinkContext {
     AVChannelLayout     *channel_layouts;
     unsigned          nb_channel_layouts;
 
+    /* only used for subtitles */
+#if FF_API_BUFFERSINK_OPTS
+    enum AVSubtitleType *subtitle_types;     ///< list of accepted subtitle types, must be terminated with -1
+    int subtitle_types_size;
+#endif
+
+    enum AVSubtitleType *subtitletypes;
+    unsigned          nb_subtitletypes;
+
     AVFrame *peeked_frame;
 } BufferSinkContext;
 
@@ -184,6 +193,14 @@ static av_cold int common_init(AVFilterContext *ctx)
         CHECK_LIST_SIZE(pixel_fmts)
         CHECK_LIST_SIZE(color_spaces)
         CHECK_LIST_SIZE(color_ranges)
+    } else if (ctx->input_pads[0].type == AVMEDIA_TYPE_SUBTITLE) {
+        if ((buf->subtitle_types_size) &&
+            (buf->nb_subtitletypes)) {
+            av_log(ctx, AV_LOG_ERROR, "Cannot combine old and new format lists\n");
+            return AVERROR(EINVAL);
+        }
+
+        CHECK_LIST_SIZE(subtitle_types)
     } else {
         if ((buf->sample_fmts_size || buf->channel_layouts_str || buf->sample_rates_size) &&
             (buf->nb_sample_formats || buf->nb_samplerates || buf->nb_channel_layouts)) {
@@ -269,6 +286,15 @@ static int init_audio(AVFilterContext *ctx)
     TERMINATE_ARRAY(sample_formats, AV_SAMPLE_FMT_NONE);
     TERMINATE_ARRAY(samplerates, -1);
     TERMINATE_ARRAY(channel_layouts, (AVChannelLayout){ .nb_channels = 0 });
+
+    return common_init(ctx);
+}
+
+static int init_subtitles(AVFilterContext *ctx)
+{
+    BufferSinkContext *s = ctx->priv;
+
+    TERMINATE_ARRAY(subtitletypes, AV_SUBTITLE_FMT_NB);
 
     return common_init(ctx);
 }
@@ -502,6 +528,41 @@ static int asink_query_formats(const AVFilterContext *ctx,
     return 0;
 }
 
+static int ssink_query_formats(AVFilterContext *ctx,
+                               AVFilterFormatsConfig **cfg_in,
+                               AVFilterFormatsConfig **cfg_out)
+{
+    BufferSinkContext *buf = ctx->priv;
+    AVFilterFormats *formats = NULL;
+    unsigned i;
+    int ret;
+
+#if FF_API_BUFFERSINK_OPTS
+    if (buf->nb_subtitletypes) {
+#endif
+        if (buf->nb_subtitletypes) {
+            ret = ff_set_common_formats_from_list2(ctx, cfg_in, cfg_out, buf->subtitle_types);
+            if (ret < 0)
+                return ret;
+        }
+#if FF_API_BUFFERSINK_OPTS
+    } else {
+        if (buf->subtitle_types_size) {
+            for (i = 0; i < NB_ITEMS(buf->subtitle_types); i++)
+                if ((ret = ff_add_format(&formats, buf->subtitle_types[i])) < 0)
+                    return ret;
+            if ((ret = ff_set_common_formats(ctx, formats)) < 0)
+                return ret;
+        } else {
+            if ((ret = ff_set_common_formats2(ctx, cfg_in, cfg_out, formats)) < 0)
+                return ret;
+        }
+#endif
+    }
+
+    return 0;
+}
+
 #define OFFSET(x) offsetof(BufferSinkContext, x)
 #define FLAGS AV_OPT_FLAG_FILTERING_PARAM|AV_OPT_FLAG_VIDEO_PARAM
 static const AVOption buffersink_options[] = {
@@ -540,9 +601,16 @@ static const AVOption abuffersink_options[] = {
     { NULL },
 };
 #undef FLAGS
+#define FLAGS AV_OPT_FLAG_FILTERING_PARAM|AV_OPT_FLAG_SUBTITLE_PARAM
+static const AVOption sbuffersink_options[] = {
+    { "subtitle_types", "set the supported subtitle formats", OFFSET(subtitle_types), AV_OPT_TYPE_BINARY, .flags = FLAGS },
+    { NULL },
+};
+#undef FLAGS
 
 AVFILTER_DEFINE_CLASS(buffersink);
 AVFILTER_DEFINE_CLASS(abuffersink);
+AVFILTER_DEFINE_CLASS(sbuffersink);
 
 const FFFilter ff_vsink_buffer = {
     .p.name        = "buffersink",
@@ -576,4 +644,24 @@ const FFFilter ff_asink_abuffer = {
     .activate      = activate,
     FILTER_INPUTS(inputs_audio),
     FILTER_QUERY_FUNC2(asink_query_formats),
+};
+
+static const AVFilterPad inputs_subtitles[] = {
+    {
+        .name = "default",
+        .type = AVMEDIA_TYPE_SUBTITLE,
+    },
+};
+
+const FFFilter ff_ssink_sbuffer = {
+    .p.name        = "sbuffersink",
+    .p.description = NULL_IF_CONFIG_SMALL("Buffer subtitle frames, and make them available to the end of the filter graph."),
+    .p.priv_class  = &sbuffersink_class,
+    .p.outputs     = NULL,
+    .priv_size     = sizeof(BufferSinkContext),
+    .init          = init_subtitles,
+    .uninit        = uninit,
+    .activate      = activate,
+    FILTER_INPUTS(inputs_subtitles),
+    FILTER_QUERY_FUNC2(ssink_query_formats),
 };

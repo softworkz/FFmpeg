@@ -627,8 +627,10 @@ extern const FFFilter ff_avsrc_movie;
  * being the same while having different 'types'). */
 extern  const FFFilter ff_asrc_abuffer;
 extern  const FFFilter ff_vsrc_buffer;
+extern  const FFFilter ff_ssrc_sbuffer;
 extern  const FFFilter ff_asink_abuffer;
 extern  const FFFilter ff_vsink_buffer;
+extern  const FFFilter ff_ssink_sbuffer;
 
 #include "libavfilter/filter_list.c"
 
