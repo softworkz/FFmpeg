@@ -395,6 +395,7 @@ extern const FFFilter ff_vf_overlay_qsv;
 extern const FFFilter ff_vf_overlay_vaapi;
 extern const FFFilter ff_vf_overlay_vulkan;
 extern const FFFilter ff_vf_overlay_cuda;
+extern const FFFilter ff_vf_overlaygraphicsubs;
 extern const FFFilter ff_vf_owdenoise;
 extern const FFFilter ff_vf_pad;
 extern const FFFilter ff_vf_pad_cuda;
@@ -614,6 +615,7 @@ extern const FFFilter ff_avf_showspectrumpic;
 extern const FFFilter ff_avf_showvolume;
 extern const FFFilter ff_avf_showwaves;
 extern const FFFilter ff_avf_showwavespic;
+extern const FFFilter ff_svf_graphicsub2video;
 extern const FFFilter ff_vaf_spectrumsynth;
 
 /* multimedia sources */
