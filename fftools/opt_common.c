@@ -191,18 +191,19 @@ static void print_all_libs_info(int flags, int level)
     PRINT_LIB_INFO(swresample, SWRESAMPLE, flags, level);
 }
 
-static void print_program_info(int flags, int level)
+static void print_program_info(int flags, int level, int print_config)
 {
     const char *indent = flags & INDENT? "  " : "";
 
     av_log(NULL, level, "%s version " FFMPEG_VERSION, program_name);
     if (flags & SHOW_COPYRIGHT)
-        av_log(NULL, level, " Copyright (c) %d-%d the FFmpeg developers",
+        av_log(NULL, level, " Copyright (c) %d-%d the FFmpeg developers and softworkz for Emby LLC",
                program_birth_year, CONFIG_THIS_YEAR);
     av_log(NULL, level, "\n");
     av_log(NULL, level, "%sbuilt with %s\n", indent, CC_IDENT);
 
-    av_log(NULL, level, "%sconfiguration: " FFMPEG_CONFIGURATION "\n", indent);
+    if (print_config)
+        av_log(NULL, level, "%sconfiguration: " FFMPEG_CONFIGURATION "\n", indent);
 }
 
 static void print_buildconf(int flags, int level)
@@ -237,15 +238,15 @@ void show_banner(int argc, char **argv, const OptionDef *options)
     if (hide_banner || idx)
         return;
 
-    print_program_info (INDENT|SHOW_COPYRIGHT, AV_LOG_INFO);
+    print_program_info (INDENT|SHOW_COPYRIGHT, AV_LOG_INFO, 0);
     print_all_libs_info(INDENT|SHOW_CONFIG,  AV_LOG_INFO);
-    print_all_libs_info(INDENT|SHOW_VERSION, AV_LOG_INFO);
+    print_all_libs_info(INDENT|SHOW_VERSION, AV_LOG_DEBUG);
 }
 
 int show_version(void *optctx, const char *opt, const char *arg)
 {
     av_log_set_callback(log_callback_help);
-    print_program_info (SHOW_COPYRIGHT, AV_LOG_INFO);
+    print_program_info (SHOW_COPYRIGHT, AV_LOG_INFO, 1);
     print_all_libs_info(SHOW_VERSION, AV_LOG_INFO);
 
     return 0;
@@ -424,24 +425,6 @@ static void show_help_codec(const char *name, int encoder)
     }
 }
 
-static void show_help_demuxer(const char *name)
-{
-    const AVInputFormat *fmt = av_find_input_format(name);
-
-    if (!fmt) {
-        av_log(NULL, AV_LOG_ERROR, "Unknown format '%s'.\n", name);
-        return;
-    }
-
-    printf("Demuxer %s [%s]:\n", fmt->name, fmt->long_name);
-
-    if (fmt->extensions)
-        printf("    Common extensions: %s.\n", fmt->extensions);
-
-    if (fmt->priv_class)
-        show_help_children(fmt->priv_class, AV_OPT_FLAG_DECODING_PARAM);
-}
-
 static void show_help_protocol(const char *name)
 {
     const AVClass *proto_class;
@@ -458,6 +441,24 @@ static void show_help_protocol(const char *name)
     }
 
     show_help_children(proto_class, AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_ENCODING_PARAM);
+}
+
+static void show_help_demuxer(const char *name)
+{
+    const AVInputFormat *fmt = av_find_input_format(name);
+
+    if (!fmt) {
+        av_log(NULL, AV_LOG_ERROR, "Unknown format '%s'.\n", name);
+        return;
+    }
+
+    printf("Demuxer %s [%s]:\n", fmt->name, fmt->long_name);
+
+    if (fmt->extensions)
+        printf("    Common extensions: %s.\n", fmt->extensions);
+
+    if (fmt->priv_class)
+        show_help_children(fmt->priv_class, AV_OPT_FLAG_DECODING_PARAM);
 }
 
 static void show_help_muxer(const char *name)

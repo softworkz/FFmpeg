@@ -2528,7 +2528,7 @@ static void ffprobe_show_program_version(AVTextFormatContext *tfc)
 
     avtext_print_section_header(tfc, NULL, SECTION_ID_PROGRAM_VERSION);
     print_str("version", FFMPEG_VERSION);
-    print_fmt("copyright", "Copyright (c) %d-%d the FFmpeg developers",
+    print_fmt("copyright", "Copyright (c) %d-%d the FFmpeg developers and softworkz for Emby LLC",
               program_birth_year, CONFIG_THIS_YEAR);
     print_str("compiler_ident", CC_IDENT);
     print_str("configuration", FFMPEG_CONFIGURATION);
