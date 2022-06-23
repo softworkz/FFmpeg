@@ -625,6 +625,11 @@ extern const FFFilter ff_avsrc_avsynctest;
 extern const FFFilter ff_avsrc_amovie;
 extern const FFFilter ff_avsrc_movie;
 
+/* subtitle filters */
+extern const FFFilter ff_sf_censor;
+extern const FFFilter ff_sf_showspeaker;
+extern const FFFilter ff_sf_textmod;
+
 /* those filters are part of public or internal API,
  * they are formatted to not be found by the grep
  * as they are manually added again (due to their 'names'
