@@ -230,9 +230,11 @@ enum FilterFormatsState {
     FF_FILTER_FORMATS_QUERY_FUNC,       ///< formats.query active.
     FF_FILTER_FORMATS_QUERY_FUNC2,      ///< formats.query_func2 active.
     FF_FILTER_FORMATS_PIXFMT_LIST,      ///< formats.pixels_list active.
+    FF_FILTER_FORMATS_SUBFMTS_LIST,     ///< formats.subs_list active.
     FF_FILTER_FORMATS_SAMPLEFMTS_LIST,  ///< formats.samples_list active.
     FF_FILTER_FORMATS_SINGLE_PIXFMT,    ///< formats.pix_fmt active
     FF_FILTER_FORMATS_SINGLE_SAMPLEFMT, ///< formats.sample_fmt active.
+    FF_FILTER_FORMATS_SINGLE_SUBFMT,    ///< formats.sub_fmt active.
 };
 
 #define FILTER_QUERY_FUNC(func)        \
@@ -247,16 +249,24 @@ enum FilterFormatsState {
 #define FILTER_SAMPLEFMTS_ARRAY(array) \
         .formats.samples_list = array, \
         .formats_state        = FF_FILTER_FORMATS_SAMPLEFMTS_LIST
+#define FILTER_SUBFMTS_ARRAY(array) \
+        .formats.subs_list = array, \
+        .formats_state        = FF_FILTER_FORMATS_SUBFMTS_LIST
 #define FILTER_PIXFMTS(...)            \
     FILTER_PIXFMTS_ARRAY(((const enum AVPixelFormat []) { __VA_ARGS__, AV_PIX_FMT_NONE }))
 #define FILTER_SAMPLEFMTS(...)         \
     FILTER_SAMPLEFMTS_ARRAY(((const enum AVSampleFormat[]) { __VA_ARGS__, AV_SAMPLE_FMT_NONE }))
+#define FILTER_SUBFMTS(...)         \
+    FILTER_SUBFMTS_ARRAY(((const enum AVSubtitleType[]) { __VA_ARGS__, AV_SUBTITLE_FMT_NONE }))
 #define FILTER_SINGLE_PIXFMT(pix_fmt_)  \
         .formats.pix_fmt = pix_fmt_,    \
         .formats_state   = FF_FILTER_FORMATS_SINGLE_PIXFMT
 #define FILTER_SINGLE_SAMPLEFMT(sample_fmt_) \
         .formats.sample_fmt = sample_fmt_,   \
         .formats_state      = FF_FILTER_FORMATS_SINGLE_SAMPLEFMT
+#define FILTER_SINGLE_SUBFMT(sub_fmt_) \
+        .formats.sub_fmt = sub_fmt_,   \
+        .formats_state      = FF_FILTER_FORMATS_SINGLE_SUBFMT
 
 #define FILTER_INOUTPADS(inout, array) \
        .p.inout      = array, \
@@ -419,6 +429,12 @@ typedef struct FFFilter {
          */
         const enum AVSampleFormat *samples_list;
         /**
+         * Analogous to pixels, but delimited by AV_SUBTITLE_FMT_NONE
+         * and restricted to filters that only have AVMEDIA_TYPE_SUBTITLE
+         * inputs and outputs.
+         */
+        const enum AVSubtitleType *subs_list;
+        /**
          * Equivalent to { pix_fmt, AV_PIX_FMT_NONE } as pixels_list.
          */
         enum AVPixelFormat  pix_fmt;
@@ -426,6 +442,10 @@ typedef struct FFFilter {
          * Equivalent to { sample_fmt, AV_SAMPLE_FMT_NONE } as samples_list.
          */
         enum AVSampleFormat sample_fmt;
+        /**
+         * Equivalent to { sub_fmt, AV_SUBTITLE_FMT_NONE } as subs_list.
+         */
+        enum AVSubtitleType sub_fmt;
     } formats;
 
     int priv_size;      ///< size of private data to allocate for the filter
