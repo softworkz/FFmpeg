@@ -633,6 +633,7 @@ extern const FFFilter ff_sf_splitcc;
 extern const FFFilter ff_sf_stripstyles;
 extern const FFFilter ff_sf_subfeed;
 extern const FFFilter ff_sf_subscale;
+extern const FFFilter ff_sf_text2graphicsub;
 extern const FFFilter ff_sf_textmod;
 
 /* those filters are part of public or internal API,
