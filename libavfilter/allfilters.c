@@ -631,6 +631,7 @@ extern const FFFilter ff_sf_graphicsub2text;
 extern const FFFilter ff_sf_showspeaker;
 extern const FFFilter ff_sf_splitcc;
 extern const FFFilter ff_sf_stripstyles;
+extern const FFFilter ff_sf_subfeed;
 extern const FFFilter ff_sf_subscale;
 extern const FFFilter ff_sf_textmod;
 
