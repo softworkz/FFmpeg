@@ -516,6 +516,11 @@ static int process_frame(AVFilterContext *ctx, const AVFrame *in,
         out->pts++;
     s->last_pts = out->pts;
 
+    if (outlink->frame_rate.num && outlink->frame_rate.den)
+        out->duration = av_rescale_q(1, av_inv_q(outlink->frame_rate), outlink->time_base);
+    else
+        out->duration = 0;
+
     ret = ff_filter_frame(outlink, out);
     if (ret < 0)
         return ret;
@@ -576,6 +581,7 @@ static const AVFilterPad qsvdeint_inputs[] = {
         .name         = "default",
         .type         = AVMEDIA_TYPE_VIDEO,
         .filter_frame = qsvdeint_filter_frame,
+        .get_buffer.video = ff_qsvvpp_get_video_buffer,
     },
 };
 

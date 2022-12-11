@@ -1499,7 +1499,7 @@ typedef struct AVCodecContext {
      *   libavcodec will behave as if this field was always set to 1.
      *   Callers that want to be forward compatible with future libavcodec
      *   versions should wrap access to this field in
-     *     #if LIBAVCODEC_VERSION_MAJOR < 60
+     *     `#if LIBAVCODEC_VERSION_MAJOR < 60`
      */
     attribute_deprecated
     int thread_safe_callbacks;
@@ -2254,6 +2254,22 @@ typedef struct AVHWAccel {
 #define AV_HWACCEL_FLAG_ALLOW_PROFILE_MISMATCH (1 << 2)
 
 /**
+ * Some hardware decoders (namely nvdec) can either output direct decoder
+ * surfaces, or make an on-device copy and return said copy.
+ * There is a hard limit on how many decoder surfaces there can be, and it
+ * cannot be accurately guessed ahead of time.
+ * For some processing chains, this can be okay, but others will run into the
+ * limit and in turn produce very confusing errors that require fine tuning of
+ * more or less obscure options by the user, or in extreme cases cannot be
+ * resolved at all without inserting an avfilter that forces a copy.
+ *
+ * Thus, the hwaccel will by default make a copy for safety and resilience.
+ * If a users really wants to minimize the amount of copies, they can set this
+ * flag and ensure their processing chain does not exhaust the surface pool.
+ */
+#define AV_HWACCEL_FLAG_UNSAFE_OUTPUT (1 << 3)
+
+/**
  * @}
  */
 
@@ -2791,10 +2807,10 @@ int avcodec_get_hw_frames_parameters(AVCodecContext *avctx,
  */
 
 enum AVPictureStructure {
-    AV_PICTURE_STRUCTURE_UNKNOWN,      //< unknown
-    AV_PICTURE_STRUCTURE_TOP_FIELD,    //< coded as top field
-    AV_PICTURE_STRUCTURE_BOTTOM_FIELD, //< coded as bottom field
-    AV_PICTURE_STRUCTURE_FRAME,        //< coded as frame
+    AV_PICTURE_STRUCTURE_UNKNOWN,      ///< unknown
+    AV_PICTURE_STRUCTURE_TOP_FIELD,    ///< coded as top field
+    AV_PICTURE_STRUCTURE_BOTTOM_FIELD, ///< coded as bottom field
+    AV_PICTURE_STRUCTURE_FRAME,        ///< coded as frame
 };
 
 typedef struct AVCodecParserContext {
