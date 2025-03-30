@@ -147,6 +147,7 @@ extern const AVFilter ff_af_speechnorm;
 extern const AVFilter ff_af_stereotools;
 extern const AVFilter ff_af_stereowiden;
 extern const AVFilter ff_af_superequalizer;
+extern const AVFilter ff_af_superfilter;
 extern const AVFilter ff_af_surround;
 extern const AVFilter ff_af_treble;
 extern const AVFilter ff_af_tremolo;
