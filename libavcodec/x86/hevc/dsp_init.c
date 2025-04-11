@@ -892,7 +892,7 @@ void ff_hevc_dsp_init_x86(HEVCDSPContext *c, const int bit_depth)
             c->idct_dc[2] = ff_hevc_idct_16x16_dc_8_avx2;
             c->idct_dc[3] = ff_hevc_idct_32x32_dc_8_avx2;
 
-#if ARCH_X86_64
+#if ARCH_X86_64 && 0
             c->put_hevc_epel[7][0][0] = hevc_put_pel_pixels32_8_avx2;
             c->put_hevc_epel[8][0][0] = hevc_put_pel_pixels48_8_avx2;
             c->put_hevc_epel[9][0][0] = hevc_put_pel_pixels64_8_avx2;
@@ -987,14 +987,14 @@ void ff_hevc_dsp_init_x86(HEVCDSPContext *c, const int bit_depth)
             c->add_residual[3] = ff_hevc_add_residual_32_8_avx2;
         }
 #endif /* HAVE_AVX2_EXTERNAL */
-        if (EXTERNAL_AVX512ICL(cpu_flags) && ARCH_X86_64) {
-            c->put_hevc_qpel[1][0][1] = ff_hevc_put_qpel_h4_8_avx512icl;
-            c->put_hevc_qpel[3][0][1] = ff_hevc_put_qpel_h8_8_avx512icl;
-            c->put_hevc_qpel[5][0][1] = ff_hevc_put_qpel_h16_8_avx512icl;
-            c->put_hevc_qpel[7][0][1] = ff_hevc_put_qpel_h32_8_avx512icl;
-            c->put_hevc_qpel[9][0][1] = ff_hevc_put_qpel_h64_8_avx512icl;
-            c->put_hevc_qpel[3][1][1] = ff_hevc_put_qpel_hv8_8_avx512icl;
-        }
+        ////if (EXTERNAL_AVX512ICL(cpu_flags) && ARCH_X86_64) {
+        ////    c->put_hevc_qpel[1][0][1] = ff_hevc_put_qpel_h4_8_avx512icl;
+        ////    c->put_hevc_qpel[3][0][1] = ff_hevc_put_qpel_h8_8_avx512icl;
+        ////    c->put_hevc_qpel[5][0][1] = ff_hevc_put_qpel_h16_8_avx512icl;
+        ////    c->put_hevc_qpel[7][0][1] = ff_hevc_put_qpel_h32_8_avx512icl;
+        ////    c->put_hevc_qpel[9][0][1] = ff_hevc_put_qpel_h64_8_avx512icl;
+        ////    c->put_hevc_qpel[3][1][1] = ff_hevc_put_qpel_hv8_8_avx512icl;
+        ////}
     } else if (bit_depth == 10) {
         if (EXTERNAL_MMXEXT(cpu_flags)) {
             c->add_residual[0] = ff_hevc_add_residual_4_10_mmxext;
@@ -1065,7 +1065,7 @@ void ff_hevc_dsp_init_x86(HEVCDSPContext *c, const int bit_depth)
             c->idct_dc[2] = ff_hevc_idct_16x16_dc_10_avx2;
             c->idct_dc[3] = ff_hevc_idct_32x32_dc_10_avx2;
 
-#if ARCH_X86_64
+#if ARCH_X86_64 && 0
             c->put_hevc_epel[5][0][0] = hevc_put_pel_pixels16_10_avx2;
             c->put_hevc_epel[6][0][0] = hevc_put_pel_pixels24_10_avx2;
             c->put_hevc_epel[7][0][0] = hevc_put_pel_pixels32_10_avx2;
