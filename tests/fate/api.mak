@@ -27,6 +27,21 @@ fate-api-threadmessage: $(APITESTSDIR)/api-threadmessage-test$(EXESUF)
 fate-api-threadmessage: CMD = run $(APITESTSDIR)/api-threadmessage-test$(EXESUF) 3 10 30 50 2 20 40
 fate-api-threadmessage: CMP = null
 
+FATE_API-yes += fate-api-dict2
+fate-api-dict2: $(APITESTSDIR)/api-dict2-test$(EXESUF)
+fate-api-dict2: CMD = run $(APITESTSDIR)/api-dict2-test$(EXESUF)
+fate-api-dict2: CMP = null
+
+# Dict2 implementation tests
+FATE_DICT2 = fate-dict2-basic fate-dict2-stress
+FATE_AVUTIL += $(FATE_DICT2)
+
+fate-dict2-basic: libavutil/tests/dict2$(EXESUF)
+fate-dict2-basic: CMD = run libavutil/tests/dict2 basic
+
+fate-dict2-stress: libavutil/tests/dict2$(EXESUF)
+fate-dict2-stress: CMD = run libavutil/tests/dict2 stress
+
 FATE_API_SAMPLES-$(CONFIG_AVFORMAT) += $(FATE_API_SAMPLES_LIBAVFORMAT-yes)
 
 ifdef SAMPLES
