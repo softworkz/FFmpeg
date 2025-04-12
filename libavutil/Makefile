@@ -26,6 +26,7 @@ HEADERS = adler32.h                                                     \
           des.h                                                         \
           detection_bbox.h                                              \
           dict.h                                                        \
+          dict2.h                                                       \
           display.h                                                     \
           dovi_meta.h                                                   \
           downmix_info.h                                                \
@@ -128,6 +129,7 @@ OBJS = adler32.o                                                        \
        des.o                                                            \
        detection_bbox.o                                                 \
        dict.o                                                           \
+       dict2.o                                                          \
        display.o                                                        \
        dovi_meta.o                                                      \
        downmix_info.o                                                   \
@@ -266,6 +268,7 @@ TESTPROGS = adler32                                                     \
             des                                                         \
             dict                                                        \
             display                                                     \
+            dict2                                                       \
             encryption_info                                             \
             error                                                       \
             eval                                                        \
