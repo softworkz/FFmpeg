@@ -102,11 +102,11 @@ int av_dict2_set(AVDictionary2 **pm, const char *key, const char *value, int fla
             if (flags & AV_DICT2_DONT_OVERWRITE)
                 return 0;
             
-            // Replace value
-            av_free(entry->value);
-            entry->value = av_strdup(value ? value : "");
-            if (!entry->value)
-                return AVERROR(ENOMEM);
+            // // Replace value
+            // av_free(entry->value);
+            // entry->value = av_strdup(value ? value : "");
+            // if (!entry->value)
+            //     return AVERROR(ENOMEM);
             
             return 0;
         }
@@ -123,12 +123,12 @@ int av_dict2_set(AVDictionary2 **pm, const char *key, const char *value, int fla
         return AVERROR(ENOMEM);
     }
     
-    entry->value = av_strdup(value ? value : "");
-    if (!entry->value) {
-        av_freep(&entry->key);
-        av_freep(&entry);
-        return AVERROR(ENOMEM);
-    }
+    // entry->value = av_strdup(value ? value : "");
+    // if (!entry->value) {
+    //     av_freep(&entry->key);
+    //     av_freep(&entry);
+    //     return AVERROR(ENOMEM);
+    // }
     
     // Insert at head of chain
     entry->next = m->entries[table_idx];
