@@ -1,0 +1,41 @@
+---
+# A comprehensive clang-tidy configuration for FFmpeg-style projects
+
+# The "Checks" key controls which rules are enabled or disabled.
+# The asterisk (*) enables all checks, and you can then disable individual ones
+# by prefixing them with a minus sign (-).
+Checks: >
+  *, 
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -modernize-macro-to-enum,
+  -clang-diagnostic-format-nonliteral,
+  -clang-diagnostic-missing-field-initializers,
+  -clang-diagnostic-implicit-fallthrough,
+  -clang-diagnostic-cast-align,
+  -llvm-include-order
+
+# You can force certain warnings to be treated as errors.
+# Here we leave it blank, but you could add something like 'cppcoreguidelines-*'.
+WarningsAsErrors: ''
+
+# The HeaderFilterRegex limits checks to files whose paths match the regex.
+# '.*' means all files are checked.
+HeaderFilterRegex: '.*'
+
+# Tell clang-tidy to follow the formatting style as defined in your .clang-format file.
+# FormatStyle: .clang-format
+
+# Optionally, declare a "User" to identify your project or coding style.
+User: FFmpeg
+
+# Custom options for individual checks can be defined under CheckOptions.
+CheckOptions:
+  - key:             modernize-use-nullptr.NullMacros
+    value:           'NULL'
+  - key:             readability-identifier-naming.ClassCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.VariableCase
+    value:           camelBack
+  - key:             misc-doxygen-asterisk_suffix.CommentStyle
+    value:           AtPrepend
+...

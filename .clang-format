@@ -34,7 +34,7 @@ BraceWrapping:
   AfterFunction:                     true
   AfterClass:                        false
   AfterStruct:                       false
-  AfterUnion:                        true
+  AfterUnion:                        false
   AfterExternBlock:                  false
   BeforeElse:                        false
   SplitEmptyFunction:                true
