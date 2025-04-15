@@ -190,3 +190,18 @@ void av_tree_enumerate(AVTreeNode *t, void *opaque,
             av_tree_enumerate(t->child[1], opaque, cmp, enu);
     }
 }
+
+void av_tree_move(struct AVTreeNode *t, struct AVTreeNode *old, void *elem, void *old_elem)
+{
+    if (t->child[0]) {
+        av_tree_move(t->child[0] - old + t, t->child[0], elem, old_elem);
+        t->child[0] = t->child[0] - old + t;
+    }
+    if (t->child[1]) {
+        av_tree_move(t->child[1] - old + t, t->child[1], elem, old_elem);
+        t->child[1] = t->child[1] - old + t;
+    }
+
+    if (t->elem && elem != old_elem)
+        t->elem = (uint8_t*)t->elem - (uint8_t*)old_elem + (uint8_t*)elem;
+}

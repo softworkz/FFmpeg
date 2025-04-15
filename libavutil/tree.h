@@ -137,6 +137,17 @@ void av_tree_enumerate(struct AVTreeNode *t, void *opaque,
                        int (*enu)(void *opaque, void *elem));
 
 /**
+ * Updates the tree in case the tree has been moved.
+ * This is needed for example when all tree nodes are in an array that is reallocated
+ *
+ * @param root the root of the tree to update
+ * @param old  the old root on which internal pointers are still based
+ * @param elem the array that contains all elements after the move
+ * @param old  the old element array
+ */
+void av_tree_move(struct AVTreeNode *root, struct AVTreeNode *old, void *elem, void *old_elem);
+
+/**
  * @}
  */
 
