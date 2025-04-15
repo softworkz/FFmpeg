@@ -40,16 +40,16 @@ struct AVTreeNode *av_tree_node_alloc(void)
 static void tree_find_next(const AVTreeNode *t, const void *key,
                    int (*cmp)(const void *key, const void *b), void *next[4], int nextlen, int direction)
 {
-    if (t) {
+    while (t) {
         unsigned int v = cmp(key, t->elem);
         if (v) {
             next[direction] = t->elem;
             av_assert2((v >> 31) == direction);
-            tree_find_next(t->child[!direction], key, cmp, next, nextlen, direction);
+            t = t->child[!direction];
         } else {
             if (nextlen >= 4)
                 next[2+direction] = t->elem;
-            tree_find_next(t->child[direction], key, cmp, next, nextlen, direction);
+            t = t->child[direction];
         }
     }
 }
