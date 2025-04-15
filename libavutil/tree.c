@@ -57,12 +57,12 @@ static void tree_find_next(const AVTreeNode *t, const void *key,
 void *av_tree_find2(const AVTreeNode *t, const void *key,
                     int (*cmp)(const void *key, const void *b), void *next[4], int nextlen)
 {
-    if (t) {
+    while(t) {
         unsigned int v = cmp(key, t->elem);
         if (v) {
             if (next)
                 next[v >> 31] = t->elem;
-            return av_tree_find2(t->child[(v >> 31) ^ 1], key, cmp, next, nextlen);
+            t = t->child[(v >> 31) ^ 1];
         } else {
             if (next) {
                 tree_find_next(t->child[0], key, cmp, next, nextlen, 0);
