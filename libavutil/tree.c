@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "avassert.h"
 #include "error.h"
 #include "log.h"
 #include "mem.h"
@@ -36,24 +37,47 @@ struct AVTreeNode *av_tree_node_alloc(void)
     return av_mallocz(sizeof(struct AVTreeNode));
 }
 
-void *av_tree_find(const AVTreeNode *t, void *key,
-                   int (*cmp)(const void *key, const void *b), void *next[2])
+static void tree_find_next(const AVTreeNode *t, const void *key,
+                   int (*cmp)(const void *key, const void *b), void *next[4], int nextlen, int direction)
+{
+    if (t) {
+        unsigned int v = cmp(key, t->elem);
+        if (v) {
+            next[direction] = t->elem;
+            av_assert2((v >> 31) == direction);
+            tree_find_next(t->child[!direction], key, cmp, next, nextlen, direction);
+        } else {
+            if (nextlen >= 4)
+                next[2+direction] = t->elem;
+            tree_find_next(t->child[direction], key, cmp, next, nextlen, direction);
+        }
+    }
+}
+
+void *av_tree_find2(const AVTreeNode *t, const void *key,
+                    int (*cmp)(const void *key, const void *b), void *next[4], int nextlen)
 {
     if (t) {
         unsigned int v = cmp(key, t->elem);
         if (v) {
             if (next)
                 next[v >> 31] = t->elem;
-            return av_tree_find(t->child[(v >> 31) ^ 1], key, cmp, next);
+            return av_tree_find2(t->child[(v >> 31) ^ 1], key, cmp, next, nextlen);
         } else {
             if (next) {
-                av_tree_find(t->child[0], key, cmp, next);
-                av_tree_find(t->child[1], key, cmp, next);
+                tree_find_next(t->child[0], key, cmp, next, nextlen, 0);
+                tree_find_next(t->child[1], key, cmp, next, nextlen, 1);
             }
             return t->elem;
         }
     }
     return NULL;
+}
+
+void *av_tree_find(const AVTreeNode *t, void *key,
+                   int (*cmp)(const void *key, const void *b), void *next[2])
+{
+    return av_tree_find2(t, key, cmp, next, 2);
 }
 
 void *av_tree_insert(AVTreeNode **tp, void *key,

@@ -55,6 +55,9 @@ struct AVTreeNode *av_tree_node_alloc(void);
  * @param next If next is not NULL, then next[0] will contain the previous
  *             element and next[1] the next element. If either does not exist,
  *             then the corresponding entry in next is unchanged.
+ *             if nextlen is 4 then next[2] will contain the first element comparing
+ *             equal that is smaller than the returned. Similarly next[3] will
+ *             contain the last element comparing equal that is larger than the returned
  * @param cmp compare function used to compare elements in the tree,
  *            API identical to that of Standard C's qsort
  *            It is guaranteed that the first and only the first argument to cmp()
@@ -63,6 +66,9 @@ struct AVTreeNode *av_tree_node_alloc(void);
  * @return An element with cmp(key, elem) == 0 or NULL if no such element
  *         exists in the tree.
  */
+void *av_tree_find2(const struct AVTreeNode *root, const void *key,
+                   int (*cmp)(const void *key, const void *b), void *next[4], int nextlen);
+
 void *av_tree_find(const struct AVTreeNode *root, void *key,
                    int (*cmp)(const void *key, const void *b), void *next[2]);
 
