@@ -26,6 +26,8 @@
 #include "libavutil/mem.h"
 #include "libavutil/map.h"
 
+#include "libavutil/timer.h"
+#include "libavutil/dict.h"
 
 static void print_set(const AVMap *s)
 {
@@ -37,6 +39,7 @@ static void print_set(const AVMap *s)
 
 int main(void)
 {
+#if 0
     void *our_cmp[] = {
         strcmp,
         av_map_strcmp_keyvalue,
@@ -185,6 +188,59 @@ int main(void)
         av_map_free(&set);
         av_assert0(!set);
     }
+#else
+#define N_ENTRIES 1000
+#define P 4
+    for (int runs = 0; runs < 1000; runs++) {
+        AVMap *map = av_map_new(strcmp, NULL, NULL);
+        for(int pass = 0; pass < 2; pass++) {
+            START_TIMER
+            unsigned r = 5;
+            for(int i=0; i<N_ENTRIES; i++) {
+                r = r*123 + 7;
+                char str[7] = "TEST";
+                str[P  ] = r;
+                str[P+1] = r>>8;
+                if(pass == 0) {
+                    av_map_add(map, str, 7, str, 7, 0);
+                } else {
+                    av_map_get(map, str, strcmp);
+                }
+            }
+            if (pass) {
+                STOP_TIMER("av_map_get")
+            } else {
+                STOP_TIMER("av_map_add")
+            }
+        }
+        av_map_free(&map);
+    }
+
+    for (int runs = 0; runs < 1000; runs++) {
+        AVDictionary *dict = NULL;
+        for(int pass = 0; pass < 2; pass++) {
+            START_TIMER
+            unsigned r = 5;
+            for(int i=0; i<N_ENTRIES; i++) {
+                r = r*123 + 7;
+                char str[7] = "TEST";
+                str[P  ] = r;
+                str[P+1] = r>>8;
+                if(pass == 0) {
+                    av_dict_set(&dict, str, str, 0);
+                } else {
+                    av_dict_get(dict, str, NULL, 0);
+                }
+            }
+            if (pass) {
+                STOP_TIMER("av_dict_get")
+            } else {
+                STOP_TIMER("av_dict_set")
+            }
+        }
+        av_dict_free(&dict);
+    }
+#endif
 
     return 0;
 }
