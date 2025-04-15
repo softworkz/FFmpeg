@@ -24,11 +24,7 @@
 #include "mem.h"
 #include "tree.h"
 
-typedef struct AVTreeNode {
-    struct AVTreeNode *child[2];
-    void *elem;
-    int state;
-} AVTreeNode;
+#include "tree_internal.h"
 
 const int av_tree_node_size = sizeof(AVTreeNode);
 

@@ -74,6 +74,10 @@ FATE_LIBAVUTIL += fate-dict
 fate-dict: libavutil/tests/dict$(EXESUF)
 fate-dict: CMD = run libavutil/tests/dict$(EXESUF)
 
+FATE_LIBAVUTIL += fate-map
+fate-map: libavutil/tests/map$(EXESUF)
+fate-map: CMD = run libavutil/tests/map$(EXESUF)
+
 FATE_LIBAVUTIL += fate-encryption-info
 fate-encryption-info: libavutil/tests/encryption_info$(EXESUF)
 fate-encryption-info: CMD = run libavutil/tests/encryption_info$(EXESUF)

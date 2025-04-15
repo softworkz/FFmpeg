@@ -82,6 +82,7 @@ HEADERS = adler32.h                                                     \
           replaygain.h                                                  \
           ripemd.h                                                      \
           samplefmt.h                                                   \
+          map.h                                                         \
           sha.h                                                         \
           sha512.h                                                      \
           spherical.h                                                   \
@@ -175,6 +176,7 @@ OBJS = adler32.o                                                        \
        rc4.o                                                            \
        ripemd.o                                                         \
        samplefmt.o                                                      \
+       map.o                                                            \
        side_data.o                                                      \
        sha.o                                                            \
        sha512.o                                                         \
@@ -293,6 +295,7 @@ TESTPROGS = adler32                                                     \
             random_seed                                                 \
             rational                                                    \
             ripemd                                                      \
+            map                                                         \
             sha                                                         \
             sha512                                                      \
             side_data_array                                             \
