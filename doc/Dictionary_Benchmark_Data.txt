@@ -1,0 +1,462 @@
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 1 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 310 cycles (min: 256, max: 33236)
+   AVDictionary2: avg 466 cycles (min: 330, max: 33786) (150.3% of baseline)
+   AVMap        : avg 214 cycles (min: 114, max: 38978) (69.0% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 41213 cycles (min: 36430, max: 3024922)
+   AVDictionary2: avg 81205 cycles (min: 70988, max: 3601472) (197.0% of baseline)
+   AVMap        : avg 48939 cycles (min: 39106, max: 2281900) (118.7% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 25610 cycles (min: 20798, max: 1442648)
+   AVDictionary2: avg 63738 cycles (min: 52730, max: 1698434) (248.9% of baseline)
+   AVMap        : avg 30859 cycles (min: 25826, max: 2865302) (120.5% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 42 cycles (min: 34, max: 119074)
+   AVDictionary2: avg 72 cycles (min: 64, max: 40280) (171.4% of baseline)
+   AVMap        : avg 41 cycles (min: 34, max: 43098) (97.6% of baseline)
+
+Benchmark completed successfully
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 2 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 1111 cycles (min: 892, max: 45208)
+   AVDictionary2: avg 657 cycles (min: 514, max: 39998) (59.1% of baseline)
+   AVMap        : avg 563 cycles (min: 388, max: 32666) (50.7% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 42563 cycles (min: 37992, max: 1444638)
+   AVDictionary2: avg 79977 cycles (min: 71940, max: 2278092) (187.9% of baseline)
+   AVMap        : avg 52504 cycles (min: 43040, max: 1694018) (123.4% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 28497 cycles (min: 23546, max: 1208568)
+   AVDictionary2: avg 63147 cycles (min: 52760, max: 2291256) (221.6% of baseline)
+   AVMap        : avg 34309 cycles (min: 29282, max: 1218274) (120.4% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 54 cycles (min: 42, max: 48548)
+   AVDictionary2: avg 78 cycles (min: 66, max: 122388) (144.4% of baseline)
+   AVMap        : avg 55 cycles (min: 46, max: 43104) (101.9% of baseline)
+
+Benchmark completed successfully
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 3 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 1307 cycles (min: 938, max: 49588)
+   AVDictionary2: avg 1080 cycles (min: 720, max: 231430) (82.6% of baseline)
+   AVMap        : avg 1068 cycles (min: 718, max: 145108) (81.7% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 43016 cycles (min: 35706, max: 20930252)
+   AVDictionary2: avg 78491 cycles (min: 71308, max: 2487020) (182.5% of baseline)
+   AVMap        : avg 52500 cycles (min: 44162, max: 6888954) (122.0% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 34417 cycles (min: 28256, max: 1679612)
+   AVDictionary2: avg 65345 cycles (min: 53772, max: 1619062) (189.9% of baseline)
+   AVMap        : avg 37534 cycles (min: 31524, max: 4348252) (109.1% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 57 cycles (min: 50, max: 32814)
+   AVDictionary2: avg 83 cycles (min: 70, max: 45314) (145.6% of baseline)
+   AVMap        : avg 79 cycles (min: 54, max: 935208) (138.6% of baseline)
+
+Benchmark completed successfully
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 5 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 2253 cycles (min: 1724, max: 623386)
+   AVDictionary2: avg 1426 cycles (min: 1116, max: 98876) (63.3% of baseline)
+   AVMap        : avg 1611 cycles (min: 1308, max: 138812) (71.5% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 46239 cycles (min: 38886, max: 2299626)
+   AVDictionary2: avg 78133 cycles (min: 71920, max: 5235922) (169.0% of baseline)
+   AVMap        : avg 56785 cycles (min: 48668, max: 1346058) (122.8% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 40070 cycles (min: 33774, max: 5272322)
+   AVDictionary2: avg 68731 cycles (min: 53924, max: 2461530) (171.5% of baseline)
+   AVMap        : avg 43399 cycles (min: 37238, max: 1579700) (108.3% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 74 cycles (min: 66, max: 39600)
+   AVDictionary2: avg 93 cycles (min: 80, max: 41166) (125.7% of baseline)
+   AVMap        : avg 97 cycles (min: 78, max: 133814) (131.1% of baseline)
+
+Benchmark completed successfully
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 10 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 5019 cycles (min: 3798, max: 352176)
+   AVDictionary2: avg 2699 cycles (min: 2040, max: 247852) (53.8% of baseline)
+   AVMap        : avg 3933 cycles (min: 2766, max: 165834) (78.4% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 58752 cycles (min: 48994, max: 3076670)
+   AVDictionary2: avg 82146 cycles (min: 72202, max: 6867008) (139.8% of baseline)
+   AVMap        : avg 66605 cycles (min: 55006, max: 3153026) (113.4% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 74699 cycles (min: 59334, max: 3707194)
+   AVDictionary2: avg 89139 cycles (min: 66064, max: 25436082) (119.3% of baseline)
+   AVMap        : avg 54566 cycles (min: 42618, max: 10240104) (73.0% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 129 cycles (min: 102, max: 199994)
+   AVDictionary2: avg 132 cycles (min: 112, max: 142572) (102.3% of baseline)
+   AVMap        : avg 154 cycles (min: 126, max: 44478) (119.4% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 25 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 12823 cycles (min: 10154, max: 944296)
+   AVDictionary2: avg 7146 cycles (min: 5632, max: 464294) (55.7% of baseline)
+   AVMap        : avg 8176 cycles (min: 6256, max: 350452) (63.8% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 89609 cycles (min: 77974, max: 2995522)
+   AVDictionary2: avg 82302 cycles (min: 73160, max: 3007334) (91.8% of baseline)
+   AVMap        : avg 79883 cycles (min: 68174, max: 3140628) (89.1% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 123457 cycles (min: 110558, max: 1610438)
+   AVDictionary2: avg 90002 cycles (min: 77210, max: 1325144) (72.9% of baseline)
+   AVMap        : avg 64624 cycles (min: 56714, max: 2473494) (52.3% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 260 cycles (min: 208, max: 600242)
+   AVDictionary2: avg 243 cycles (min: 192, max: 798670) (93.5% of baseline)
+   AVMap        : avg 356 cycles (min: 282, max: 392158) (136.9% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 50 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 29978 cycles (min: 24328, max: 1474502)
+   AVDictionary2: avg 16420 cycles (min: 12988, max: 284426) (54.8% of baseline)
+   AVMap        : avg 23558 cycles (min: 11908, max: 970974) (78.6% of baseline)
+
+2. Lookup Performance (100% existing keys, 100000 runs):
+   AVDictionary : avg 155116 cycles (min: 135390, max: 9012880)
+   AVDictionary2: avg 82615 cycles (min: 73602, max: 2761130) (53.3% of baseline)
+   AVMap        : avg 90493 cycles (min: 77622, max: 3824524) (58.3% of baseline)
+
+3. Lookup Performance (50% existing keys, 100000 runs):
+   AVDictionary : avg 251623 cycles (min: 206464, max: 12732728)
+   AVDictionary2: avg 112692 cycles (min: 88980, max: 3814908) (44.8% of baseline)
+   AVMap        : avg 91424 cycles (min: 74244, max: 2877784) (36.3% of baseline)
+
+4. Iteration Performance (100000 runs):
+   AVDictionary : avg 519 cycles (min: 400, max: 1152432)
+   AVDictionary2: avg 439 cycles (min: 380, max: 217098) (84.6% of baseline)
+   AVMap        : avg 661 cycles (min: 558, max: 810242) (127.4% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 100 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 81115 cycles (min: 64952, max: 847136)
+   AVDictionary2: avg 40204 cycles (min: 27924, max: 401170) (49.6% of baseline)
+   AVMap        : avg 50393 cycles (min: 23934, max: 298484) (62.1% of baseline)
+
+2. Lookup Performance (100% existing keys, 10000 runs):
+   AVDictionary : avg 313071 cycles (min: 264542, max: 7147818)
+   AVDictionary2: avg 82780 cycles (min: 74604, max: 1326828) (26.4% of baseline)
+   AVMap        : avg 102494 cycles (min: 90724, max: 1213110) (32.7% of baseline)
+
+3. Lookup Performance (50% existing keys, 10000 runs):
+   AVDictionary : avg 474283 cycles (min: 403718, max: 2530658)
+   AVDictionary2: avg 126364 cycles (min: 101840, max: 1848498) (26.6% of baseline)
+   AVMap        : avg 118218 cycles (min: 95340, max: 1516344) (24.9% of baseline)
+
+4. Iteration Performance (10000 runs):
+   AVDictionary : avg 893 cycles (min: 772, max: 41262)
+   AVDictionary2: avg 778 cycles (min: 724, max: 44356) (87.1% of baseline)
+   AVMap        : avg 1168 cycles (min: 1088, max: 45592) (130.8% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 250 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 333125 cycles (min: 258744, max: 1325610)
+   AVDictionary2: avg 159356 cycles (min: 95324, max: 537758) (47.8% of baseline)
+   AVMap        : avg 186784 cycles (min: 78274, max: 585006) (56.1% of baseline)
+
+2. Lookup Performance (100% existing keys, 10000 runs):
+   AVDictionary : avg 748016 cycles (min: 683050, max: 3483690)
+   AVDictionary2: avg 128249 cycles (min: 87802, max: 1590854) (17.1% of baseline)
+   AVMap        : avg 140113 cycles (min: 122018, max: 1288682) (18.7% of baseline)
+
+3. Lookup Performance (50% existing keys, 10000 runs):
+   AVDictionary : avg 1030383 cycles (min: 948024, max: 3080186)
+   AVDictionary2: avg 154383 cycles (min: 129396, max: 1409748) (15.0% of baseline)
+   AVMap        : avg 141779 cycles (min: 124046, max: 1447820) (13.8% of baseline)
+
+4. Iteration Performance (10000 runs):
+   AVDictionary : avg 2690 cycles (min: 1988, max: 367178)
+   AVDictionary2: avg 2521 cycles (min: 1828, max: 1178014) (93.7% of baseline)
+   AVMap        : avg 3374 cycles (min: 2686, max: 1377088) (125.4% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 500 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 1011189 cycles (min: 831082, max: 3192930)
+   AVDictionary2: avg 374018 cycles (min: 243866, max: 1257420) (37.0% of baseline)
+   AVMap        : avg 525409 cycles (min: 171142, max: 1671800) (52.0% of baseline)
+
+2. Lookup Performance (100% existing keys, 10000 runs):
+   AVDictionary : avg 1479133 cycles (min: 1297470, max: 15430274)
+   AVDictionary2: avg 182932 cycles (min: 140122, max: 1818982) (12.4% of baseline)
+   AVMap        : avg 184390 cycles (min: 155302, max: 1593508) (12.5% of baseline)
+
+3. Lookup Performance (50% existing keys, 10000 runs):
+   AVDictionary : avg 2033581 cycles (min: 1858034, max: 7074306)
+   AVDictionary2: avg 176236 cycles (min: 148652, max: 1795112) (8.7% of baseline)
+   AVMap        : avg 174391 cycles (min: 153552, max: 1727248) (8.6% of baseline)
+
+4. Iteration Performance (10000 runs):
+   AVDictionary : avg 4934 cycles (min: 3708, max: 322528)
+   AVDictionary2: avg 4885 cycles (min: 3660, max: 758670) (99.0% of baseline)
+   AVMap        : avg 6480 cycles (min: 5322, max: 930392) (131.3% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 1000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 3898727 cycles (min: 3289026, max: 5660258)
+   AVDictionary2: avg 928904 cycles (min: 718546, max: 1384310) (23.8% of baseline)
+   AVMap        : avg 778864 cycles (min: 432600, max: 1539546) (20.0% of baseline)
+
+2. Lookup Performance (100% existing keys, 5000 runs):
+   AVDictionary : avg 3152981 cycles (min: 2739356, max: 10072370)
+   AVDictionary2: avg 249594 cycles (min: 183798, max: 2771614) (7.9% of baseline)
+   AVMap        : avg 224534 cycles (min: 186610, max: 1681348) (7.1% of baseline)
+
+3. Lookup Performance (50% existing keys, 5000 runs):
+   AVDictionary : avg 3675493 cycles (min: 3391216, max: 15415892)
+   AVDictionary2: avg 186528 cycles (min: 156582, max: 1320576) (5.1% of baseline)
+   AVMap        : avg 193777 cycles (min: 170188, max: 1368988) (5.3% of baseline)
+
+4. Iteration Performance (5000 runs):
+   AVDictionary : avg 10146 cycles (min: 7962, max: 931870)
+   AVDictionary2: avg 10030 cycles (min: 7852, max: 955820) (98.9% of baseline)
+   AVMap        : avg 12658 cycles (min: 10646, max: 826786) (124.8% of baseline)
+
+Benchmark completed successfully
+
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 2500 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 20761246 cycles (min: 19053182, max: 24746272)
+   AVDictionary2: avg 1966098 cycles (min: 1619400, max: 3111606) (9.5% of baseline)
+   AVMap        : avg 1857357 cycles (min: 1191456, max: 3066144) (8.9% of baseline)
+
+2. Lookup Performance (100% existing keys, 1000 runs):
+   AVDictionary : avg 2950138 cycles (min: 2741008, max: 5653494)
+   AVDictionary2: avg 234341 cycles (min: 202266, max: 795188) (7.9% of baseline)
+   AVMap        : avg 222170 cycles (min: 202556, max: 759470) (7.5% of baseline)
+
+3. Lookup Performance (50% existing keys, 1000 runs):
+   AVDictionary : avg 8563196 cycles (min: 7522276, max: 16255690)
+   AVDictionary2: avg 247513 cycles (min: 180328, max: 1408638) (2.9% of baseline)
+   AVMap        : avg 255538 cycles (min: 210374, max: 1343230) (3.0% of baseline)
+
+4. Iteration Performance (1000 runs):
+   AVDictionary : avg 29115 cycles (min: 24030, max: 960446)
+   AVDictionary2: avg 43865 cycles (min: 34684, max: 1158070) (150.7% of baseline)
+   AVMap        : avg 31546 cycles (min: 27504, max: 326618) (108.3% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 5000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 84455803 cycles (min: 78127970, max: 94263882)
+   AVDictionary2: avg 4225330 cycles (min: 3606828, max: 5460052) (5.0% of baseline)
+   AVMap        : avg 3455363 cycles (min: 2522392, max: 5799720) (4.1% of baseline)
+
+2. Lookup Performance (100% existing keys, 200 runs):
+   AVDictionary : avg 2963695 cycles (min: 2748164, max: 4507726)
+   AVDictionary2: avg 250247 cycles (min: 215836, max: 1117026) (8.4% of baseline)
+   AVMap        : avg 238958 cycles (min: 221464, max: 454684) (8.1% of baseline)
+
+3. Lookup Performance (50% existing keys, 200 runs):
+   AVDictionary : avg 17699182 cycles (min: 15498304, max: 29633318)
+   AVDictionary2: avg 329159 cycles (min: 190404, max: 1297984) (1.9% of baseline)
+   AVMap        : avg 362946 cycles (min: 246870, max: 1585834) (2.1% of baseline)
+
+4. Iteration Performance (200 runs):
+   AVDictionary : avg 53846 cycles (min: 47884, max: 463870)
+   AVDictionary2: avg 92514 cycles (min: 80262, max: 328678) (171.8% of baseline)
+   AVMap        : avg 61905 cycles (min: 54010, max: 765550) (115.0% of baseline)
+
+Benchmark completed successfully
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 10000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 362830859 cycles (min: 353381220, max: 383073726)
+   AVDictionary2: avg 8866988 cycles (min: 7779818, max: 13506320) (2.4% of baseline)
+   AVMap        : avg 7838390 cycles (min: 5678236, max: 11821630) (2.2% of baseline)
+
+2. Lookup Performance (100% existing keys, 200 runs):
+   AVDictionary : avg 3117775 cycles (min: 2739644, max: 4955702)
+   AVDictionary2: avg 277893 cycles (min: 222796, max: 1665114) (8.9% of baseline)
+   AVMap        : avg 291541 cycles (min: 247616, max: 1194956) (9.4% of baseline)
+
+3. Lookup Performance (50% existing keys, 200 runs):
+   AVDictionary : avg 39118446 cycles (min: 35471378, max: 45295782)
+   AVDictionary2: avg 432935 cycles (min: 296184, max: 1383836) (1.1% of baseline)
+   AVMap        : avg 514603 cycles (min: 373354, max: 1077976) (1.3% of baseline)
+
+4. Iteration Performance (200 runs):
+   AVDictionary : avg 132250 cycles (min: 95844, max: 1254784)
+   AVDictionary2: avg 259621 cycles (min: 210856, max: 635688) (196.3% of baseline)
+   AVMap        : avg 124136 cycles (min: 106810, max: 956594) (93.9% of baseline)
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 25000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 2399516038 cycles (min: 2397701224, max: 2401330852)
+   AVDictionary2: avg 27057229 cycles (min: 26615140, max: 27499318) (1.1% of baseline)
+   AVMap        : avg 38317427 cycles (min: 37231696, max: 39403158) (1.6% of baseline)
+
+2. Lookup Performance (100% existing keys, 500 runs):
+   AVDictionary : avg 2935091 cycles (min: 2737462, max: 5343036)
+   AVDictionary2: avg 244981 cycles (min: 211942, max: 1225956) (8.3% of baseline)
+   AVMap        : avg 299864 cycles (min: 272888, max: 1218488) (10.2% of baseline)
+
+3. Lookup Performance (50% existing keys, 500 runs):
+   AVDictionary : avg 92590831 cycles (min: 86713864, max: 109873738)
+   AVDictionary2: avg 403363 cycles (min: 291794, max: 1639414) (0.4% of baseline)
+   AVMap        : avg 728032 cycles (min: 503912, max: 1638330) (0.8% of baseline)
+
+4. Iteration Performance (500 runs):
+   AVDictionary : avg 367308 cycles (min: 257078, max: 1456362)
+   AVDictionary2: avg 873216 cycles (min: 686270, max: 3019018) (237.7% of baseline)
+   AVMap        : avg 328124 cycles (min: 274246, max: 2826626) (89.3% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 50000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 10073876706 cycles (min: 10045243966, max: 10102509446)
+   AVDictionary2: avg 67559563 cycles (min: 60919964, max: 74199162) (0.7% of baseline)
+   AVMap        : avg 101557773 cycles (min: 101546978, max: 101568568) (1.0% of baseline)
+
+2. Lookup Performance (100% existing keys, 100 runs):
+   AVDictionary : avg 3062505 cycles (min: 2741326, max: 4254850)
+   AVDictionary2: avg 284400 cycles (min: 226482, max: 725182) (9.3% of baseline)
+   AVMap        : avg 349076 cycles (min: 289712, max: 1353800) (11.4% of baseline)
+
+3. Lookup Performance (50% existing keys, 100 runs):
+   AVDictionary : avg 191193034 cycles (min: 178624738, max: 217993696)
+   AVDictionary2: avg 443757 cycles (min: 397302, max: 1303032) (0.2% of baseline)
+   AVMap        : avg 957559 cycles (min: 862608, max: 2635630) (0.5% of baseline)
+
+4. Iteration Performance (100 runs):
+   AVDictionary : avg 1485354 cycles (min: 814616, max: 3650096)
+   AVDictionary2: avg 2917238 cycles (min: 2007364, max: 8844446) (196.4% of baseline)
+   AVMap        : avg 777566 cycles (min: 684692, max: 1939322) (52.3% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 100000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 45446026787 cycles (min: 45101533372, max: 45790520202)
+   AVDictionary2: avg 150192824 cycles (min: 144429420, max: 155956228) (0.3% of baseline)
+   AVMap        : avg 225821733 cycles (min: 212536504, max: 239106962) (0.5% of baseline)
+
+2. Lookup Performance (100% existing keys, 100 runs):
+   AVDictionary : avg 3085317 cycles (min: 2747490, max: 4587106)
+   AVDictionary2: avg 284027 cycles (min: 228512, max: 836238) (9.2% of baseline)
+   AVMap        : avg 375552 cycles (min: 309292, max: 733184) (12.2% of baseline)
+
+3. Lookup Performance (50% existing keys, 100 runs):
+   AVDictionary : avg 519644568 cycles (min: 425058486, max: 713126436)
+   AVDictionary2: avg 492125 cycles (min: 419314, max: 2092476) (0.1% of baseline)
+   AVMap        : avg 1208417 cycles (min: 1036400, max: 2008580) (0.2% of baseline)
+
+4. Iteration Performance (100 runs):
+   AVDictionary : avg 3133421 cycles (min: 2194592, max: 7405204)
+   AVDictionary2: avg 7557450 cycles (min: 6160044, max: 12146984) (241.2% of baseline)
+   AVMap        : avg 1613565 cycles (min: 1431512, max: 3524188) (51.5% of baseline)
+
+Benchmark completed successfully
+
+
+
+Benchmarking AVDictionary vs AVDictionary2 vs AVMap with 200000 entries
+
+1. Insertion Performance:
+   AVDictionary : avg 281602757428 cycles (min: 281064682286, max: 282140832570)
+   AVDictionary2: avg 327146262 cycles (min: 326223736, max: 328068788) (0.1% of baseline)
+   AVMap        : avg 538823074 cycles (min: 510914178, max: 566731970) (0.2% of baseline)
+
+2. Lookup Performance (100% existing keys, 100 runs):
+   AVDictionary : avg 3069747 cycles (min: 2743932, max: 4913570)
+   AVDictionary2: avg 282565 cycles (min: 230628, max: 959528) (9.2% of baseline)
+   AVMap        : avg 400410 cycles (min: 326608, max: 2402842) (13.0% of baseline)
+
+3. Lookup Performance (50% existing keys, 100 runs):
+   AVDictionary : avg 1557460485 cycles (min: 1494701820, max: 1737170544)
+   AVDictionary2: avg 471980 cycles (min: 437314, max: 720342) (0.0% of baseline)
+   AVMap        : avg 1347415 cycles (min: 1230254, max: 1943424) (0.1% of baseline)
+
+4. Iteration Performance (100 runs):
+   AVDictionary : avg 6116946 cycles (min: 5399890, max: 9638810)
+   AVDictionary2: avg 16990515 cycles (min: 15183402, max: 26774720) (277.8% of baseline)
+   AVMap        : avg 3142539 cycles (min: 2862462, max: 5237466) (51.4% of baseline)
+
+Benchmark completed successfully
+

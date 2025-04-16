@@ -20,13 +20,14 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "avassert.h"
 #include "avstring.h"
 #include "error.h"
 #include "mem.h"
 #include "map.h"
-
 #include "tree_internal.h" // For improved readability with AVTreeNode, do NOT touch AVTreeNode internals
 
 typedef struct{
@@ -141,6 +142,7 @@ const AVMapEntry *av_map_get(const AVMap *s, const char *keyvalue, int (*cmp)(co
     if (!keyvalue)
         return NULL;
 
+    ////printf("AVMap: keyvalue found for %s\n", keyvalue);
     return &keyvalue2internal(keyvalue)->map_entry;
 }
 
