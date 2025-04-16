@@ -93,7 +93,6 @@ static void default_print_section_footer(AVTextFormatContext *wctx)
 {
     DefaultContext *def = wctx->priv;
     const AVTextFormatSection *section = tf_get_section(wctx, wctx->level);
-
     char buf[32];
 
     if (!section)

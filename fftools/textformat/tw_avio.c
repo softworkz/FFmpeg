@@ -75,7 +75,7 @@ const AVTextWriter avtextwriter_avio = {
 
 int avtextwriter_create_file(AVTextWriterContext **pwctx, const char *output_filename)
 {
-    if (!pwctx || !output_filename || !output_filename[0])
+    if (!output_filename || !output_filename[0])
         return AVERROR(EINVAL);
 
     IOWriterContext *ctx;

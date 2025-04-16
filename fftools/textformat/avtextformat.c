@@ -143,9 +143,6 @@ int avtext_context_open(AVTextFormatContext      **ptctx,
     if (!ptctx || !formatter)
         return AVERROR(EINVAL);
 
-    if (!formatter->priv_size && formatter->priv_class)
-        return AVERROR(EINVAL);
-
     if (!((tctx = av_mallocz(sizeof(AVTextFormatContext))))) {
         ret = AVERROR(ENOMEM);
         goto fail;
@@ -218,7 +215,7 @@ int avtext_context_open(AVTextFormatContext      **ptctx,
                     av_log(NULL, AV_LOG_ERROR, " %s", n);
                 av_log(NULL, AV_LOG_ERROR, "\n");
             }
-            return ret;
+            goto fail;
         }
 
     /* validate replace string */
@@ -236,7 +233,8 @@ int avtext_context_open(AVTextFormatContext      **ptctx,
                     av_log(tctx, AV_LOG_ERROR,
                            "Invalid UTF8 sequence %s found in string validation replace '%s'\n",
                            bp.str, tctx->string_validation_replacement);
-                return ret;
+                av_bprint_finalize(&bp, NULL);
+                goto fail;
             }
         }
     }
@@ -264,7 +262,7 @@ static const char unit_bit_per_second_str[] = "bit/s";
 
 void avtext_print_section_header(AVTextFormatContext *tctx, const void *data, int section_id)
 {
-    if (!tctx || section_id < 0 || section_id >= tctx->nb_sections)
+    if (section_id < 0 || section_id >= tctx->nb_sections)
         return;
 
     tctx->level++;
@@ -280,7 +278,7 @@ void avtext_print_section_header(AVTextFormatContext *tctx, const void *data, in
 
 void avtext_print_section_footer(AVTextFormatContext *tctx)
 {
-    if (!tctx || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
+    if (tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
         return;
 
     int section_id = tctx->section[tctx->level]->id;
@@ -302,7 +300,7 @@ void avtext_print_integer(AVTextFormatContext *tctx, const char *key, int64_t va
 {
     const AVTextFormatSection *section;
 
-    if (!tctx || !key || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
+    if (!key || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
         return;
 
     section = tctx->section[tctx->level];
@@ -317,7 +315,7 @@ void avtext_print_integer_flags(AVTextFormatContext *tctx, const char *key, int6
 {
     const AVTextFormatSection *section;
 
-    if (!tctx || !key || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
+    if (!key || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
         return;
 
     section = tctx->section[tctx->level];
@@ -340,9 +338,6 @@ static inline int validate_string(AVTextFormatContext *tctx, char **dstp, const 
     AVBPrint dstbuf;
     AVBPrint bp;
     int invalid_chars_nb = 0, ret = 0;
-
-    if (!tctx || !dstp || !src)
-        return AVERROR(EINVAL);
 
     *dstp = NULL;
     av_bprint_init(&dstbuf, 0, AV_BPRINT_SIZE_UNLIMITED);
@@ -471,7 +466,7 @@ int avtext_print_string(AVTextFormatContext *tctx, const char *key, const char *
     const AVTextFormatSection *section;
     int ret = 0;
 
-    if (!tctx || !key || !val || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
+    if (!key || !val || tctx->level < 0 || tctx->level >= SECTION_MAX_NB_LEVELS)
         return AVERROR(EINVAL);
 
     section = tctx->section[tctx->level];
@@ -521,7 +516,7 @@ void avtext_print_time(AVTextFormatContext *tctx, const char *key,
         avtext_print_string(tctx, key, "N/A", AV_TEXTFORMAT_PRINT_STRING_OPTIONAL);
     } else {
         char buf[128];
-        double d = av_q2d(*time_base) * (double)ts;
+        double d = av_q2d(*time_base) * ts;
         struct unit_value uv;
         uv.val.d = d;
         uv.unit = unit_second_str;
@@ -660,9 +655,6 @@ int avtextwriter_context_open(AVTextWriterContext **pwctx, const AVTextWriter *w
     int ret = 0;
 
     if (!pwctx || !writer)
-        return AVERROR(EINVAL);
-
-    if (!writer->priv_size && writer->priv_class)
         return AVERROR(EINVAL);
 
     if (!((wctx = av_mallocz(sizeof(AVTextWriterContext))))) {
