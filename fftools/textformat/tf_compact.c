@@ -158,7 +158,7 @@ static void compact_print_section_header(AVTextFormatContext *wctx, const void *
 
         /* define a prefix for elements not contained in an array or
            in a wrapper, or for array elements with a type */
-        const char *element_name = (char *)av_x_if_null(section->element_name, section->name);
+        const char *element_name = av_x_if_null(section->element_name, section->name);
         AVBPrint *section_pbuf = &wctx->section_pbuf[wctx->level];
 
         compact->nested_section[wctx->level] = 1;
@@ -177,7 +177,7 @@ static void compact_print_section_header(AVTextFormatContext *wctx, const void *
                     (*p >= '0' && *p <= '9') ||
                     (*p >= 'a' && *p <= 'z') ||
                     (*p >= 'A' && *p <= 'Z')
-                    ? (char)(char)av_tolower(*p)
+                    ? (char)av_tolower(*p)
                     : '_';
                 av_bprint_chars(section_pbuf, c, 1);
             }

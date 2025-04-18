@@ -163,7 +163,7 @@ static inline char *upcase_string(char *dst, size_t dst_size, const char *src)
 {
     unsigned i;
     for (i = 0; src[i] && i < dst_size - 1; i++)
-        dst[i]      = (char)av_toupper(src[i]);
+        dst[i]      = av_toupper(src[i]);
     dst[i] = 0;
     return dst;
 }
@@ -256,7 +256,7 @@ static void print_link(GraphPrintContext *gpc, AVFilterLink *link)
     case AVMEDIA_TYPE_VIDEO:
 
         if (hw_frames_ctx && hw_frames_ctx->data) {
-            AVHWFramesContext *      hwfctx      = (AVHWFramesContext *)hw_frames_ctx->data;
+            AVHWFramesContext *hwfctx = hw_frames_ctx->data;
             const AVPixFmtDescriptor *pix_desc_hw = av_pix_fmt_desc_get(hwfctx->format);
             const AVPixFmtDescriptor *pix_desc_sw = av_pix_fmt_desc_get(hwfctx->sw_format);
             if (pix_desc_hw && pix_desc_sw)
@@ -312,7 +312,7 @@ static void print_link(GraphPrintContext *gpc, AVFilterLink *link)
     print_fmt_opt("sample_rate", "%d/%d", link->time_base.num, link->time_base.den);
 
     if (hw_frames_ctx && hw_frames_ctx->data)
-        print_hwframescontext(gpc, (AVHWFramesContext *)hw_frames_ctx->data);
+        print_hwframescontext(gpc, hw_frames_ctx->data);
 }
 
 static char sanitize_char(const char c)
@@ -391,7 +391,7 @@ static void print_filter(GraphPrintContext *gpc, const AVFilterContext *filter, 
     }
 
     if (filter->hw_device_ctx) {
-        AVHWDeviceContext *device_context = (AVHWDeviceContext *)filter->hw_device_ctx->data;
+        AVHWDeviceContext *device_context = filter->hw_device_ctx->data;
         print_hwdevicecontext(gpc, device_context);
         if (filter->extra_hw_frames > 0)
             print_int("extra_hw_frames", filter->extra_hw_frames);
@@ -493,7 +493,7 @@ static void print_filtergraph_single(GraphPrintContext *gpc, FilterGraph *fg, AV
         print_int("input_index", ifilter->index);
 
         if (ifilter->linklabel)
-            print_str("link_label", (const char*)ifilter->linklabel);
+            print_str("link_label", ifilter->linklabel);
 
         if (ifilter->filter) {
             print_id("filter_id", ifilter->filter->name);
@@ -501,9 +501,9 @@ static void print_filtergraph_single(GraphPrintContext *gpc, FilterGraph *fg, AV
         }
 
         if (ifilter->linklabel && ifilter->filter)
-            av_dict_set(&input_map, ifilter->filter->name, (const char *)ifilter->linklabel, 0);
+            av_dict_set(&input_map, ifilter->filter->name, ifilter->linklabel, 0);
         else if (ifilter->opts.name && ifilter->filter)
-            av_dict_set(&input_map, ifilter->filter->name, (const char *)ifilter->opts.name, 0);
+            av_dict_set(&input_map, ifilter->filter->name, ifilter->opts.name, 0);
 
         print_str("media_type", av_get_media_type_string(media_type));
 
@@ -524,7 +524,7 @@ static void print_filtergraph_single(GraphPrintContext *gpc, FilterGraph *fg, AV
         print_str("name", ofilter->name);
 
         if (fg->outputs[i]->linklabel)
-            print_str("link_label", (const char*)fg->outputs[i]->linklabel);
+            print_str("link_label", fg->outputs[i]->linklabel);
 
         if (ofilter->filter) {
             print_id("filter_id", ofilter->filter->name);
@@ -747,7 +747,7 @@ static int print_streams(GraphPrintContext *gpc, InputFile **ifiles, int nb_ifil
 
     for (int n = nb_ofiles - 1; n >= 0; n--) {
         OutputFile *of = ofiles[n];
-        Muxer *muxer = (Muxer *)of;
+        Muxer *muxer = of;
 
         if (!muxer->fc)
             continue;
@@ -1077,7 +1077,7 @@ static int print_filtergraphs_priv(FilterGraph **graphs, int nb_graphs, InputFil
                 goto cleanup;
             }
 
-            avio_write(avio, (const unsigned char *)target_buf.str, FFMIN(target_buf.len, target_buf.size - 1));
+            avio_write(avio, target_buf.str, FFMIN(target_buf.len, target_buf.size - 1));
             avio_flush(avio);
 
             if ((ret = avio_closep(&avio)) < 0)
