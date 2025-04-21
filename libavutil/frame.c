@@ -26,6 +26,7 @@
 #include "refstruct.h"
 #include "samplefmt.h"
 #include "side_data.h"
+#include "subfmt.h"
 #include "hwcontext.h"
 
 static void get_frame_defaults(AVFrame *frame)
@@ -46,6 +47,12 @@ static void get_frame_defaults(AVFrame *frame)
     frame->color_range         = AVCOL_RANGE_UNSPECIFIED;
     frame->chroma_location     = AVCHROMA_LOC_UNSPECIFIED;
     frame->flags               = 0;
+    frame->num_subtitle_areas  = 0;
+    frame->subtitle_areas      = NULL;
+    frame->subtitle_header     = NULL;
+    frame->repeat_sub          = 0;
+    frame->subtitle_timing.start_pts = 0;
+    frame->subtitle_timing.duration  = 0;
 }
 
 AVFrame *av_frame_alloc(void)
@@ -70,6 +77,8 @@ void av_frame_free(AVFrame **frame)
 }
 
 #define ALIGN (HAVE_SIMD_ALIGN_64 ? 64 : 32)
+
+static int frame_copy_subtitles(AVFrame *dst, const AVFrame *src, int copy_data);
 
 static int get_video_buffer(AVFrame *frame, int align)
 {
@@ -202,22 +211,59 @@ static int get_audio_buffer(AVFrame *frame, int align)
 
 }
 
+static int get_subtitle_buffer(AVFrame *frame)
+{
+    // Buffers in AVFrame->buf[] are not used in case of subtitle frames.
+    // To accomodate with existing code, checking ->buf[0] to determine
+    // whether a frame is ref-counted or has data, we're adding a 1-byte
+    // buffer here, which marks the subtitle frame to contain data.
+    frame->buf[0] = av_buffer_alloc(1);
+    if (!frame->buf[0]) {
+        av_frame_unref(frame);
+        return AVERROR(ENOMEM);
+    }
+
+    frame->extended_data = frame->data;
+
+    return 0;
+}
+
 int av_frame_get_buffer(AVFrame *frame, int align)
 {
     if (frame->format < 0)
         return AVERROR(EINVAL);
 
     if (frame->width > 0 && frame->height > 0)
-        return get_video_buffer(frame, align);
+        frame->type = AVMEDIA_TYPE_VIDEO;
     else if (frame->nb_samples > 0 &&
              (av_channel_layout_check(&frame->ch_layout)))
-        return get_audio_buffer(frame, align);
+        frame->type = AVMEDIA_TYPE_AUDIO;
 
-    return AVERROR(EINVAL);
+    return av_frame_get_buffer2(frame, align);
+}
+
+int av_frame_get_buffer2(AVFrame *frame, int align)
+{
+    if (frame->format < 0)
+        return AVERROR(EINVAL);
+
+    switch (frame->type) {
+    case AVMEDIA_TYPE_VIDEO:
+        return get_video_buffer(frame, align);
+    case AVMEDIA_TYPE_AUDIO:
+        return get_audio_buffer(frame, align);
+    case AVMEDIA_TYPE_SUBTITLE:
+        return get_subtitle_buffer(frame);
+    default:
+        return AVERROR(EINVAL);
+    }
 }
 
 static int frame_copy_props(AVFrame *dst, const AVFrame *src, int force_copy)
 {
+    int ret;
+
+    dst->type                   = src->type;
     dst->pict_type              = src->pict_type;
     dst->sample_aspect_ratio    = src->sample_aspect_ratio;
     dst->crop_top               = src->crop_top;
@@ -240,6 +286,12 @@ static int frame_copy_props(AVFrame *dst, const AVFrame *src, int force_copy)
     dst->colorspace             = src->colorspace;
     dst->color_range            = src->color_range;
     dst->chroma_location        = src->chroma_location;
+    dst->repeat_sub             = src->repeat_sub;
+    dst->subtitle_timing.start_pts = src->subtitle_timing.start_pts;
+    dst->subtitle_timing.duration  = src->subtitle_timing.duration;
+
+    if ((ret = av_buffer_replace(&dst->subtitle_header, src->subtitle_header)) < 0)
+        return ret;
 
     av_dict_copy(&dst->metadata, src->metadata, 0);
 
@@ -281,6 +333,7 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
     av_assert1(dst->ch_layout.nb_channels == 0 &&
                dst->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC);
 
+    dst->type           = src->type;
     dst->format         = src->format;
     dst->width          = src->width;
     dst->height         = src->height;
@@ -296,7 +349,7 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
 
     /* duplicate the frame data if it's not refcounted */
     if (!src->buf[0]) {
-        ret = av_frame_get_buffer(dst, 0);
+        ret = av_frame_get_buffer2(dst, 0);
         if (ret < 0)
             goto fail;
 
@@ -317,6 +370,10 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
             goto fail;
         }
     }
+
+    /* copy subtitle areas */
+    if (src->type == AVMEDIA_TYPE_SUBTITLE)
+        frame_copy_subtitles(dst, src, 0);
 
     if (src->extended_buf) {
         dst->extended_buf = av_calloc(src->nb_extended_buf,
@@ -510,6 +567,21 @@ void av_frame_unref(AVFrame *frame)
     av_buffer_unref(&frame->opaque_ref);
     av_refstruct_unref(&frame->private_ref);
 
+    av_buffer_unref(&frame->subtitle_header);
+
+    for (unsigned i = 0; i < frame->num_subtitle_areas; i++) {
+        AVSubtitleArea *area = frame->subtitle_areas[i];
+
+        for (unsigned n = 0; n < FF_ARRAY_ELEMS(area->buf); n++)
+            av_buffer_unref(&area->buf[n]);
+
+        av_freep(&area->text);
+        av_freep(&area->ass);
+        av_free(area);
+    }
+
+    av_freep(&frame->subtitle_areas);
+
     if (frame->extended_data != frame->data)
         av_freep(&frame->extended_data);
 
@@ -532,6 +604,7 @@ void av_frame_move_ref(AVFrame *dst, AVFrame *src)
 
 int av_frame_is_writable(AVFrame *frame)
 {
+    AVSubtitleArea *area;
     int ret = 1;
 
     /* assume non-refcounted frames are not writable */
@@ -543,6 +616,15 @@ int av_frame_is_writable(AVFrame *frame)
             ret &= !!av_buffer_is_writable(frame->buf[i]);
     for (int i = 0; i < frame->nb_extended_buf; i++)
         ret &= !!av_buffer_is_writable(frame->extended_buf[i]);
+
+    for (unsigned i = 0; i < frame->num_subtitle_areas; i++) {
+        area = frame->subtitle_areas[i];
+        if (area) {
+            for (unsigned n = 0; n < FF_ARRAY_ELEMS(area->buf); n++)
+                if (area->buf[n])
+                    ret &= !!av_buffer_is_writable(area->buf[n]);
+            }
+    }
 
     return ret;
 }
@@ -556,6 +638,7 @@ int av_frame_make_writable(AVFrame *frame)
         return 0;
 
     memset(&tmp, 0, sizeof(tmp));
+    tmp.type           = frame->type;
     tmp.format         = frame->format;
     tmp.width          = frame->width;
     tmp.height         = frame->height;
@@ -569,7 +652,7 @@ int av_frame_make_writable(AVFrame *frame)
     if (frame->hw_frames_ctx)
         ret = av_hwframe_get_buffer(frame->hw_frames_ctx, &tmp, 0);
     else
-        ret = av_frame_get_buffer(&tmp, 0);
+        ret = av_frame_get_buffer2(&tmp, 0);
     if (ret < 0)
         return ret;
 
@@ -604,13 +687,21 @@ AVBufferRef *av_frame_get_plane_buffer(const AVFrame *frame, int plane)
     uintptr_t data;
     int planes;
 
-    if (frame->nb_samples) {
+    switch(frame->type) {
+    case AVMEDIA_TYPE_VIDEO:
+        planes = 4;
+        break;
+    case AVMEDIA_TYPE_AUDIO:
+        {
         int channels = frame->ch_layout.nb_channels;
         if (!channels)
             return NULL;
         planes = av_sample_fmt_is_planar(frame->format) ? channels : 1;
-    } else
-        planes = 4;
+        break;
+        }
+    default:
+        return NULL;
+    }
 
     if (plane < 0 || plane >= planes || !frame->extended_data[plane])
         return NULL;
@@ -706,16 +797,96 @@ static int frame_copy_audio(AVFrame *dst, const AVFrame *src)
     return 0;
 }
 
+static int av_subtitle_area2area(AVSubtitleArea *dst, const AVSubtitleArea *src, int copy_data)
+{
+    dst->x         =  src->x;
+    dst->y         =  src->y;
+    dst->w         =  src->w;
+    dst->h         =  src->h;
+    dst->nb_colors =  src->nb_colors;
+    dst->type      =  src->type;
+    dst->flags     =  src->flags;
+
+    switch (dst->type) {
+    case AV_SUBTITLE_FMT_BITMAP:
+
+        for (unsigned i = 0; i < AV_NUM_BUFFER_POINTERS; i++) {
+            if (src->h > 0 && src->w > 0 && src->buf[i]) {
+                dst->buf[0] = av_buffer_ref(src->buf[i]);
+                if (!dst->buf[i])
+                    return AVERROR(ENOMEM);
+
+                if (copy_data) {
+                    const int ret = av_buffer_make_writable(&dst->buf[i]);
+                    if (ret < 0)
+                        return ret;
+                }
+
+                dst->linesize[i] = src->linesize[i];
+            }
+        }
+
+        memcpy(&dst->pal[0], &src->pal[0], sizeof(src->pal[0]) * 256);
+
+        break;
+    case AV_SUBTITLE_FMT_TEXT:
+
+        if (src->text) {
+            dst->text = av_strdup(src->text);
+            if (!dst->text)
+                return AVERROR(ENOMEM);
+        }
+
+        break;
+    case AV_SUBTITLE_FMT_ASS:
+
+        if (src->ass) {
+            dst->ass = av_strdup(src->ass);
+            if (!dst->ass)
+                return AVERROR(ENOMEM);
+        }
+
+        break;
+    default:
+
+        av_log(NULL, AV_LOG_ERROR, "Subtitle area has invalid format: %d", dst->type);
+        return AVERROR(ENOMEM);
+    }
+
+    return 0;
+}
+
+static int frame_copy_subtitles(AVFrame *dst, const AVFrame *src, int copy_data)
+{
+    dst->format = src->format;
+
+    dst->num_subtitle_areas = src->num_subtitle_areas;
+
+    if (src->num_subtitle_areas) {
+        dst->subtitle_areas = av_malloc_array(src->num_subtitle_areas, sizeof(AVSubtitleArea *));
+
+        for (unsigned i = 0; i < src->num_subtitle_areas; i++) {
+            dst->subtitle_areas[i] = av_mallocz(sizeof(AVSubtitleArea));
+            av_subtitle_area2area(dst->subtitle_areas[i], src->subtitle_areas[i], copy_data);
+        }
+    }
+
+    return 0;
+}
+
 int av_frame_copy(AVFrame *dst, const AVFrame *src)
 {
     if (dst->format != src->format || dst->format < 0)
         return AVERROR(EINVAL);
 
-    if (dst->width > 0 && dst->height > 0)
+    switch(dst->type) {
+    case AVMEDIA_TYPE_VIDEO:
         return frame_copy_video(dst, src);
-    else if (dst->nb_samples > 0 &&
-             (av_channel_layout_check(&dst->ch_layout)))
+    case AVMEDIA_TYPE_AUDIO:
         return frame_copy_audio(dst, src);
+    case AVMEDIA_TYPE_SUBTITLE:
+        return frame_copy_subtitles(dst, src, 1);
+    }
 
     return AVERROR(EINVAL);
 }
