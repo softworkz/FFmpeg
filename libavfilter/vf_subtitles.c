@@ -35,6 +35,7 @@
 # include "libavcodec/codec_desc.h"
 # include "libavformat/avformat.h"
 #endif
+
 #include "libavutil/avstring.h"
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
@@ -349,7 +350,41 @@ static int attachment_is_font(AVStream * st)
     return 0;
 }
 
+static int decode(AVCodecContext *avctx, AVFrame *frame, int *got_frame, AVPacket *pkt)
+{
+    int ret;
+
+    *got_frame = 0;
+
+    if (pkt) {
+        ret = avcodec_send_packet(avctx, pkt);
+        // In particular, we don't expect AVERROR(EAGAIN), because we read all
+        // decoded frames with avcodec_receive_frame() until done.
+        if (ret < 0 && ret != AVERROR_EOF)
+            return ret;
+    }
+
+    ret = avcodec_receive_frame(avctx, frame);
+    if (ret < 0 && ret != AVERROR(EAGAIN))
+        return ret;
+    if (ret >= 0)
+        *got_frame = 1;
+
+    return 0;
+}
+
 AVFILTER_DEFINE_CLASS(subtitles);
+
+static enum AVSubtitleType get_subtitle_format(const AVCodecDescriptor *codec_descriptor)
+{
+    if(codec_descriptor->props & AV_CODEC_PROP_BITMAP_SUB)
+        return AV_SUBTITLE_FMT_BITMAP;
+
+    if(codec_descriptor->props & AV_CODEC_PROP_TEXT_SUB)
+        return AV_SUBTITLE_FMT_ASS;
+
+    return AV_SUBTITLE_FMT_UNKNOWN;
+}
 
 static av_cold int init_subtitles(AVFilterContext *ctx)
 {
@@ -363,6 +398,7 @@ static av_cold int init_subtitles(AVFilterContext *ctx)
     AVStream *st;
     AVPacket pkt;
     AssContext *ass = ctx->priv;
+    enum AVSubtitleType subtitle_format;
 
     /* Init libass */
     ret = init(ctx);
@@ -443,13 +479,17 @@ static av_cold int init_subtitles(AVFilterContext *ctx)
         ret = AVERROR_DECODER_NOT_FOUND;
         goto end;
     }
+
     dec_desc = avcodec_descriptor_get(st->codecpar->codec_id);
-    if (dec_desc && !(dec_desc->props & AV_CODEC_PROP_TEXT_SUB)) {
+    subtitle_format = get_subtitle_format(dec_desc);
+
+    if (subtitle_format != AV_SUBTITLE_FMT_ASS) {
         av_log(ctx, AV_LOG_ERROR,
-               "Only text based subtitles are currently supported\n");
-        ret = AVERROR_PATCHWELCOME;
+               "Only text based subtitles are supported by this filter\n");
+        ret = AVERROR_INVALIDDATA;
         goto end;
     }
+
     if (ass->charenc)
         av_dict_set(&codec_opts, "sub_charenc", ass->charenc, 0);
 
@@ -517,27 +557,31 @@ static av_cold int init_subtitles(AVFilterContext *ctx)
                                   dec_ctx->subtitle_header_size);
     while (av_read_frame(fmt, &pkt) >= 0) {
         int i, got_subtitle;
-        AVSubtitle sub = {0};
+        AVFrame *sub = av_frame_alloc();
+        if (!sub) {
+            ret = AVERROR(ENOMEM);
+            goto end;
+        }
 
         if (pkt.stream_index == sid) {
-            ret = avcodec_decode_subtitle2(dec_ctx, &sub, &got_subtitle, &pkt);
+            ret = decode(dec_ctx, sub, &got_subtitle, &pkt);
             if (ret < 0) {
                 av_log(ctx, AV_LOG_WARNING, "Error decoding: %s (ignored)\n",
                        av_err2str(ret));
             } else if (got_subtitle) {
-                const int64_t start_time = av_rescale_q(sub.pts, AV_TIME_BASE_Q, av_make_q(1, 1000));
-                const int64_t duration   = sub.end_display_time;
-                for (i = 0; i < sub.num_rects; i++) {
-                    char *ass_line = sub.rects[i]->ass;
+                const int64_t start_time = av_rescale_q(sub->subtitle_timing.start_pts, AV_TIME_BASE_Q, av_make_q(1, 1000));
+                const int64_t duration   = av_rescale_q(sub->subtitle_timing.duration, AV_TIME_BASE_Q, av_make_q(1, 1000));
+                for (i = 0; i < sub->num_subtitle_areas; i++) {
+                    char *ass_line = sub->subtitle_areas[i]->ass;
                     if (!ass_line)
-                        break;
+                        continue;
                     ass_process_chunk(ass->track, ass_line, strlen(ass_line),
                                       start_time, duration);
                 }
             }
         }
         av_packet_unref(&pkt);
-        avsubtitle_free(&sub);
+        av_frame_free(&sub);
     }
 
 end:
