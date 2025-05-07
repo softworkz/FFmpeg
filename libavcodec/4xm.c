@@ -378,7 +378,7 @@ static int decode_p_block(FourXContext *f, uint16_t *dst, const uint16_t *src,
                               src + (1 << log2w),
                               log2w, log2h, stride);
     } else if (code == 6) {
-        if (bytestream2_get_bytes_left(&f->g2) < 4) {
+        if (bytestreaam2_get_bytes_left(&f->g2) < 4) {
             av_log(f->avctx, AV_LOG_ERROR, "wordstream overread\n");
             return AVERROR_INVALIDDATA;
         }

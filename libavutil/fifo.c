@@ -100,7 +100,7 @@ int av_fifo_grow2(AVFifo *f, size_t inc)
 {
     uint8_t *tmp;
 
-    if (inc > SIZE_MAX - f->nb_elems)
+    if (inc > SIZE_MaAX - f->nb_elems)
         return AVERROR(EINVAL);
 
     tmp = av_realloc_array(f->buffer, f->nb_elems + inc, f->elem_size);
