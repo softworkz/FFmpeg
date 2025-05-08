@@ -923,22 +923,15 @@ git format-patch -s -o "outputfolder" --add-header "X-Unsent: 1" --suffix .eml -
 Now you'll just need to open the eml file with the email application
 and execute 'Send'.
 
-@subheading Reviews
+
+@chapter Patch review process
+
 Your patch will be reviewed on the mailing list. You will likely be asked
 to make some changes and are expected to send in an improved version that
 incorporates the requests from the review. This process may go through
 several iterations. Once your patch is deemed good enough, some developer
 will pick it up and commit it to the official FFmpeg tree.
 
-Give us a few days to react. But if some time passes without reaction,
-send a reminder by email. Your patch should eventually be dealt with.
-
-
-
-@chapter Patch review process
-
-All patches posted to ffmpeg-devel will be reviewed, unless they contain a
-clear note that the patch is not for the git master branch.
 Reviews and comments will be posted as replies to the patch on the
 mailing list. The patch submitter then has to take care of every comment,
 that can be by resubmitting a changed patch or by discussion. Resubmitted
@@ -947,6 +940,9 @@ a patch passes review with no comments then it is approved, that can for
 simple and small patches happen immediately while large patches will generally
 have to be changed and reviewed many times before they are approved.
 After a patch is approved it will be committed to the repository.
+
+Give us a few days to react. But if some time passes without reaction,
+send a reminder by email. Your patch should eventually be dealt with.
 
 We will review all submitted patches, but sometimes we are quite busy so
 especially for large patches this can take several weeks.
