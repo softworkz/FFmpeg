@@ -752,10 +752,7 @@ We think our rules are not too hard. If you have comments, contact us.
 First, read the @ref{Coding Rules} above if you did not yet, in particular
 the rules regarding patch submission.
 
-When you submit your patch, please use @code{git format-patch} or
-@code{git send-email}. We cannot read other diffs :-).
-
-Also please do not submit a patch which contains several unrelated changes.
+Please do not submit a patch which contains several unrelated changes.
 Split it into separate, self-contained pieces. This does not mean splitting
 file by file. Instead, make the patch as small as possible while still
 keeping it as a logical unit that contains an individual change, even
@@ -767,13 +764,6 @@ The tool is located in the tools directory.
 
 Run the @ref{Regression tests} before submitting a patch in order to verify
 it does not cause unexpected problems.
-
-It also helps quite a bit if you tell us what the patch does (for example
-'replaces lrint by lrintf'), and why (for example '*BSD isn't C99 compliant
-and has no lrint()')
-
-Also please if you send several patches, send each patch as a separate mail,
-do not attach several unrelated patches to the same mail.
 
 
 @section Patch submission checklist
@@ -892,23 +882,35 @@ of leaks, out of array accesses, etc.
 
 Patches should be posted to the
 @uref{https://lists.ffmpeg.org/mailman/listinfo/ffmpeg-devel, ffmpeg-devel}
-mailing list. Use @code{git send-email} when possible since it will properly
-send patches without requiring extra care. If you cannot, then send patches
-as base64-encoded attachments, so your patch is not trashed during
+mailing list. 
+
+There are several ways how this can be accomplished:
+
+@subsection Using @code{git send-email}: Git sends e-mail directly via SMTP
+
+@code{git send-email} will properly format and send
+send patches without requiring extra care if the required setup is feasible.
+
+Please see @url{https://git-send-email.io/}.
+
+For gmail additionally see @url{https://shallowsky.com/blog/tech/email/gmail-app-passwds.html}.
+
+
+@subsection With @code{git format-patch}: Sending patches from email clients
+
+You can create patch files via @code{git format-patch} and send them as inline
+text or as base64-encoded attachments, so your patch is not trashed during
 transmission. Also ensure the correct mime type is used
-(text/x-diff or text/x-patch or at least text/plain) and that only one
-patch is inline or attached per mail.
+(text/x-diff or text/x-patch or at least text/plain).
+
+If you send several patches, send each patch as a separate mail,
+do not attach several unrelated patches to the same mail.
+
 You can check @url{https://patchwork.ffmpeg.org}, if your patch does not show up, its mime type
 likely was wrong.
 
-@subheading How to setup git send-email?
 
-Please see @url{https://git-send-email.io/}.
-For gmail additionally see @url{https://shallowsky.com/blog/tech/email/gmail-app-passwds.html}.
-
-@subheading Sending patches from email clients
-Using @code{git send-email} might not be desirable for everyone. The
-following trick allows to send patches via email clients in a safe
+The following trick allows to send patches via email clients in a safe
 way. It has been tested with Outlook and Thunderbird (with X-Unsent
 extension) and might work with other applications.
 
