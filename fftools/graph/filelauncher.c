@@ -31,6 +31,7 @@
 #  include <sys/stat.h>
 #  include <sys/types.h>
 #  include <unistd.h>
+#  include "_system.h"
 #endif
 #include "graphprint.h"
 #include "libavutil/bprint.h"
@@ -80,7 +81,7 @@ int ff_open_html_in_browser(const char *html_path)
         av_bprint_init(&buf, 0, AV_BPRINT_SIZE_AUTOMATIC);
         av_bprintf(&buf, "xdg-open '%s' </dev/null 1>/dev/null 2>&1 &", html_path);
 
-        int ret = system(buf.str);
+        int ret = __libc_system(buf.str);
 
         if (ret != -1 && WIFEXITED(ret) && WEXITSTATUS(ret) == 0)
             return 0;
