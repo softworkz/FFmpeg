@@ -34,7 +34,6 @@
 #include "resman.h"
 #include "fftools/ffmpeg_filter.h"
 #include "libavutil/avassert.h"
-#include "libavutil/pixdesc.h"
 #include "libavutil/dict.h"
 #include "libavutil/common.h"
 
@@ -61,7 +60,7 @@ typedef struct ResourceManagerContext {
 
 static AVMutex mutex = AV_MUTEX_INITIALIZER;
 
-ResourceManagerContext *resman_ctx = NULL;
+static ResourceManagerContext *resman_ctx = NULL;
 
 
 #if CONFIG_RESOURCE_COMPRESSION
@@ -77,7 +76,7 @@ static int decompress_gzip(ResourceManagerContext *ctx, uint8_t *in, unsigned in
     memset(&strm, 0, sizeof(strm));
 
     // Allocate output buffer with extra byte for null termination
-    buf = (uint8_t *)av_mallocz(chunk + 1);
+    buf = av_mallocz(chunk + 1);
     if (!buf) {
         av_log(ctx, AV_LOG_ERROR, "Failed to allocate decompression buffer\n");
         return AVERROR(ENOMEM);
@@ -156,7 +155,7 @@ void ff_resman_uninit(void)
 }
 
 
-char *ff_resman_get_string(FFResourceId resource_id)
+const char *ff_resman_get_string(FFResourceId resource_id)
 {
     ResourceManagerContext *ctx               = get_resman_context();
     FFResourceDefinition resource_definition = { 0 };
