@@ -33,7 +33,7 @@
 #define CHECK_CU(x) FF_CUDA_CHECK_DL(avctx, cu, x)
 
 int ff_cuda_load_module(void *avctx, AVCUDADeviceContext *hwctx, CUmodule *cu_module,
-                        const unsigned char *data, const unsigned int length)
+                        const unsigned char *data)
 {
     CudaFunctions *cu = hwctx->internal->cuda_dl;
 
@@ -44,7 +44,7 @@ int ff_cuda_load_module(void *avctx, AVCUDADeviceContext *hwctx, CUmodule *cu_mo
         return AVERROR(ENOMEM);
 
     uLongf buf_size = uncompressed_size;
-    int ret = uncompress(buf, &buf_size, data + 4, length);
+    int ret = uncompress(buf, &buf_size, data + 8, AV_RN32(data + 4));
     if (ret != Z_OK || uncompressed_size != buf_size) {
         av_log(avctx, AV_LOG_ERROR, "Error uncompressing cuda code. zlib returned %d\n", ret);
         ret = AVERROR_EXTERNAL;

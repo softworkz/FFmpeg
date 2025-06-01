@@ -39,8 +39,6 @@ typedef struct FFResourceDefinition {
     const char *name;
 
     const unsigned char *data;
-    const unsigned *data_len;
-
 } FFResourceDefinition;
 
 void ff_resman_uninit(void);

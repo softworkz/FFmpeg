@@ -217,14 +217,13 @@ static av_cold int cuda_bilateral_load_functions(AVFilterContext *ctx)
     int ret;
 
     extern const unsigned char ff_vf_bilateral_cuda_ptx_data[];
-    extern const unsigned int ff_vf_bilateral_cuda_ptx_len;
 
     ret = CHECK_CU(cu->cuCtxPushCurrent(cuda_ctx));
     if (ret < 0)
         return ret;
 
     ret = ff_cuda_load_module(ctx, s->hwctx, &s->cu_module,
-                              ff_vf_bilateral_cuda_ptx_data, ff_vf_bilateral_cuda_ptx_len);
+                              ff_vf_bilateral_cuda_ptx_data);
     if (ret < 0)
         goto fail;
 

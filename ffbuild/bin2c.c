@@ -29,7 +29,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "libavutil/attributes.h"
 #include "libavutil/macros.h"
 
 #if CONFIG_PTX_COMPRESSION || CONFIG_RESOURCE_COMPRESSION
@@ -116,7 +115,7 @@ static void write_u32(FILE *output, uint32_t num)
                 (num >> (HAVE_BIGENDIAN ? (24 - 8 * i) : 8 * i)) & 0xff);
 }
 
-static int handle_compressed_file(FILE *input, FILE *output, unsigned *compressed_sizep)
+static int handle_compressed_file(FILE *input, FILE *output)
 {
     unsigned char *compressed_data;
     uint32_t compressed_size, uncompressed_size;
@@ -126,9 +125,8 @@ static int handle_compressed_file(FILE *input, FILE *output, unsigned *compresse
     if (err)
         return err;
 
-    *compressed_sizep = compressed_size;
-
     write_u32(output, uncompressed_size);
+    write_u32(output, compressed_size);
 
     for (unsigned i = 0; i < compressed_size; ++i)
         fprintf(output, "0x%02x, ", compressed_data[i]);
@@ -143,10 +141,9 @@ int main(int argc, char **argv)
 {
     const char *name;
     FILE *input, *output;
-    unsigned int length = 0;
     unsigned char data;
-    av_unused int compression = 0;
-    int arg_idx = 1;
+    int compression = 0;
+    int arg_idx = 1, external_size = 0;
 
     if (argc < 3)
         return 1;
@@ -158,6 +155,14 @@ int main(int argc, char **argv)
         return -1;
 #endif
         compression = 1;
+        ++arg_idx;
+    }
+    if (!strcmp(argv[arg_idx], "--external-size")) {
+        if (compression) {
+            fprintf(stderr, "Compression and external size make no sense.\n");
+            return -1;
+        }
+        external_size = 1;
         ++arg_idx;
     }
 
@@ -193,23 +198,26 @@ int main(int argc, char **argv)
 
 #if CONFIG_PTX_COMPRESSION || CONFIG_RESOURCE_COMPRESSION
     if (compression) {
-        int err = handle_compressed_file(input, output, &length);
+        int err = handle_compressed_file(input, output);
         if (err) {
             fclose(input);
             fclose(output);
             return err;
         }
+        fprintf(output, "};\n");
     } else
 #endif
     {
+        unsigned int length = 0;
+
         while (fread(&data, 1, 1, input) > 0) {
             fprintf(output, "0x%02x, ", data);
             length++;
         }
+        fprintf(output, "0x00 };\n");
+        if (external_size)
+            fprintf(output, "const unsigned int ff_%s_len = %u;\n", name, length);
     }
-
-    fprintf(output, "0x00 };\n");
-    fprintf(output, "const unsigned int ff_%s_len = %u;\n", name, length);
 
     fclose(output);
 

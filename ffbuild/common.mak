@@ -122,7 +122,7 @@ $(BIN2CEXE): ffbuild/bin2c_host.o
 	$(METALLIB) --split-module-without-linking $< -o $@
 
 %.metallib.c: %.metallib $(BIN2CEXE)
-	$(BIN2C) $< $@ $(subst .,_,$(basename $(notdir $@)))
+	$(BIN2C) --external-size $< $@ $(subst .,_,$(basename $(notdir $@)))
 
 %.ptx: %.cu $(SRC_PATH)/compat/cuda/cuda_runtime.h
 	$(COMPILE_NVCC)
