@@ -115,10 +115,13 @@ static void write_u32(FILE *output, uint32_t num)
                 (num >> (HAVE_BIGENDIAN ? (24 - 8 * i) : 8 * i)) & 0xff);
 }
 
-static int handle_compressed_file(FILE *input, FILE *output)
+static int handle_compressed_file(FILE *input, FILE *output, const char *name)
 {
     unsigned char *compressed_data;
     uint32_t compressed_size, uncompressed_size;
+
+    fprintf(output, "#include \"libavutil/mem_internal.h\"\n");
+    fprintf(output, "DECLARE_ALIGNED_4(const unsigned char, ff_%s_data)[] = { ", name);
 
     int err = read_file_and_compress(&compressed_data, &compressed_size,
                                      &uncompressed_size, input);
@@ -194,11 +197,9 @@ int main(int argc, char **argv)
         }
     }
 
-    fprintf(output, "const unsigned char ff_%s_data[] = { ", name);
-
 #if CONFIG_PTX_COMPRESSION || CONFIG_RESOURCE_COMPRESSION
     if (compression) {
-        int err = handle_compressed_file(input, output);
+        int err = handle_compressed_file(input, output, name);
         if (err) {
             fclose(input);
             fclose(output);
@@ -210,6 +211,7 @@ int main(int argc, char **argv)
     {
         unsigned int length = 0;
 
+        fprintf(output, "const unsigned char ff_%s_data[] = { ", name);
         while (fread(&data, 1, 1, input) > 0) {
             fprintf(output, "0x%02x, ", data);
             length++;

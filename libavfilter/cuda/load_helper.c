@@ -38,13 +38,13 @@ int ff_cuda_load_module(void *avctx, AVCUDADeviceContext *hwctx, CUmodule *cu_mo
     CudaFunctions *cu = hwctx->internal->cuda_dl;
 
 #if CONFIG_PTX_COMPRESSION
-    uint32_t uncompressed_size = AV_RN32(data);
+    uint32_t uncompressed_size = AV_RN32A(data);
     uint8_t *buf = av_realloc(NULL, uncompressed_size + 1);
     if (!buf)
         return AVERROR(ENOMEM);
 
     uLongf buf_size = uncompressed_size;
-    int ret = uncompress(buf, &buf_size, data + 8, AV_RN32(data + 4));
+    int ret = uncompress(buf, &buf_size, data + 8, AV_RN32A(data + 4));
     if (ret != Z_OK || uncompressed_size != buf_size) {
         av_log(avctx, AV_LOG_ERROR, "Error uncompressing cuda code. zlib returned %d\n", ret);
         ret = AVERROR_EXTERNAL;

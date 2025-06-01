@@ -64,14 +64,14 @@ static ResourceManagerContext resman_ctx = { .class = &resman_class };
 static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, char **out)
 {
     // Allocate output buffer with extra byte for null termination
-    uint32_t uncompressed_size = AV_RN32(in);
+    uint32_t uncompressed_size = AV_RN32A(in);
     uint8_t *buf = av_malloc(uncompressed_size + 1);
     if (!buf) {
         av_log(ctx, AV_LOG_ERROR, "Failed to allocate decompression buffer\n");
         return AVERROR(ENOMEM);
     }
     uLongf buf_size = uncompressed_size;
-    int ret = uncompress(buf, &buf_size, in + 8, AV_RN32(in + 4));
+    int ret = uncompress(buf, &buf_size, in + 8, AV_RN32A(in + 4));
     if (ret != Z_OK || uncompressed_size != buf_size) {
         av_log(ctx, AV_LOG_ERROR, "Error uncompressing resource. zlib returned %d\n", ret);
         av_free(buf);
