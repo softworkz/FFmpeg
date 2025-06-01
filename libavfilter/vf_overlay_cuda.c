@@ -415,7 +415,6 @@ static int overlay_cuda_activate(AVFilterContext *avctx)
 static int overlay_cuda_config_output(AVFilterLink *outlink)
 {
     extern const unsigned char ff_vf_overlay_cuda_ptx_data[];
-    extern const unsigned int ff_vf_overlay_cuda_ptx_len;
 
     int err;
     FilterLink       *outl = ff_filter_link(outlink);
@@ -494,7 +493,7 @@ static int overlay_cuda_config_output(AVFilterLink *outlink)
         return err;
     }
 
-    err = ff_cuda_load_module(ctx, ctx->hwctx, &ctx->cu_module, ff_vf_overlay_cuda_ptx_data, ff_vf_overlay_cuda_ptx_len);
+    err = ff_cuda_load_module(ctx, ctx->hwctx, &ctx->cu_module, ff_vf_overlay_cuda_ptx_data);
     if (err < 0) {
         CHECK_CU(cu->cuCtxPopCurrent(&dummy));
         return err;

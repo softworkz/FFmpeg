@@ -368,7 +368,6 @@ static int config_props(AVFilterLink *inlink)
     int ret;
 
     extern const unsigned char ff_vf_thumbnail_cuda_ptx_data[];
-    extern const unsigned int ff_vf_thumbnail_cuda_ptx_len;
 
     s->hwctx = device_hwctx;
     s->cu_stream = s->hwctx->stream;
@@ -377,7 +376,7 @@ static int config_props(AVFilterLink *inlink)
     if (ret < 0)
         return ret;
 
-    ret = ff_cuda_load_module(ctx, device_hwctx, &s->cu_module, ff_vf_thumbnail_cuda_ptx_data, ff_vf_thumbnail_cuda_ptx_len);
+    ret = ff_cuda_load_module(ctx, device_hwctx, &s->cu_module, ff_vf_thumbnail_cuda_ptx_data);
     if (ret < 0)
         return ret;
 

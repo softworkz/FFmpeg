@@ -37,14 +37,11 @@
 #include "libavutil/dict.h"
 
 extern const unsigned char ff_graph_html_data[];
-extern const unsigned int ff_graph_html_len;
-
 extern const unsigned char ff_graph_css_data[];
-extern const unsigned ff_graph_css_len;
 
 static const FFResourceDefinition resource_definitions[] = {
-    [FF_RESOURCE_GRAPH_CSS]   = { FF_RESOURCE_GRAPH_CSS,   "graph.css",   &ff_graph_css_data[0],   &ff_graph_css_len   },
-    [FF_RESOURCE_GRAPH_HTML]  = { FF_RESOURCE_GRAPH_HTML,  "graph.html",  &ff_graph_html_data[0],  &ff_graph_html_len  },
+    [FF_RESOURCE_GRAPH_CSS]   = { FF_RESOURCE_GRAPH_CSS,   "graph.css",   ff_graph_css_data  },
+    [FF_RESOURCE_GRAPH_HTML]  = { FF_RESOURCE_GRAPH_HTML,  "graph.html",  ff_graph_html_data },
 };
 
 
@@ -64,7 +61,7 @@ static ResourceManagerContext resman_ctx = { .class = &resman_class };
 
 #if CONFIG_RESOURCE_COMPRESSION
 
-static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, unsigned in_len, char **out)
+static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, char **out)
 {
     // Allocate output buffer with extra byte for null termination
     uint32_t uncompressed_size = AV_RN32(in);
@@ -74,7 +71,7 @@ static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, unsig
         return AVERROR(ENOMEM);
     }
     uLongf buf_size = uncompressed_size;
-    int ret = uncompress(buf, &buf_size, in + 4, in_len);
+    int ret = uncompress(buf, &buf_size, in + 8, AV_RN32(in + 4));
     if (ret != Z_OK || uncompressed_size != buf_size) {
         av_log(ctx, AV_LOG_ERROR, "Error uncompressing resource. zlib returned %d\n", ret);
         av_free(buf);
@@ -126,8 +123,7 @@ char *ff_resman_get_string(FFResourceId resource_id)
 
         char *out = NULL;
 
-        int ret = decompress_zlib(ctx, resource_definition.data, *resource_definition.data_len, &out);
-
+        int ret = decompress_zlib(ctx, resource_definition.data, &out);
         if (ret) {
             av_log(ctx, AV_LOG_ERROR, "Unable to decompress the resource with ID %d\n", resource_id);
             goto end;

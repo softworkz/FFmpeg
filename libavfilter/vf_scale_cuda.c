@@ -290,7 +290,6 @@ static av_cold int cudascale_load_functions(AVFilterContext *ctx)
     const char *function_infix = "";
 
     extern const unsigned char ff_vf_scale_cuda_ptx_data[];
-    extern const unsigned int ff_vf_scale_cuda_ptx_len;
 
     switch(s->interp_algo) {
     case INTERP_ALGO_NEAREST:
@@ -324,7 +323,7 @@ static av_cold int cudascale_load_functions(AVFilterContext *ctx)
         return ret;
 
     ret = ff_cuda_load_module(ctx, s->hwctx, &s->cu_module,
-                              ff_vf_scale_cuda_ptx_data, ff_vf_scale_cuda_ptx_len);
+                              ff_vf_scale_cuda_ptx_data);
     if (ret < 0)
         goto fail;
 
