@@ -21,11 +21,11 @@
 #include "libavutil/hwcontext.h"
 #include "libavutil/hwcontext_cuda_internal.h"
 #include "libavutil/cuda_check.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/mem.h"
 
 #if CONFIG_PTX_COMPRESSION
 #include <zlib.h>
-#define CHUNK_SIZE 1024 * 64
 #endif
 
 #include "load_helper.h"
@@ -38,57 +38,23 @@ int ff_cuda_load_module(void *avctx, AVCUDADeviceContext *hwctx, CUmodule *cu_mo
     CudaFunctions *cu = hwctx->internal->cuda_dl;
 
 #if CONFIG_PTX_COMPRESSION
-    z_stream stream = { 0 };
-    uint8_t *buf, *tmp;
-    uint64_t buf_size;
-    int ret;
-
-    if (inflateInit(&stream) != Z_OK) {
-        av_log(avctx, AV_LOG_ERROR, "Error during zlib initialisation: %s\n", stream.msg);
-        return AVERROR(ENOSYS);
-    }
-
-    buf_size = CHUNK_SIZE * 4;
-    buf = av_realloc(NULL, buf_size);
-    if (!buf) {
-        inflateEnd(&stream);
+    uint32_t uncompressed_size = AV_RN32(data);
+    uint8_t *buf = av_realloc(NULL, uncompressed_size + 1);
+    if (!buf)
         return AVERROR(ENOMEM);
+
+    uLongf buf_size = uncompressed_size;
+    int ret = uncompress(buf, &buf_size, data + 4, length);
+    if (ret != Z_OK || uncompressed_size != buf_size) {
+        av_log(avctx, AV_LOG_ERROR, "Error uncompressing cuda code. zlib returned %d\n", ret);
+        ret = AVERROR_EXTERNAL;
+        goto fail;
     }
-
-    stream.next_in = data;
-    stream.avail_in = length;
-
-    do {
-        stream.avail_out = buf_size - stream.total_out;
-        stream.next_out = buf + stream.total_out;
-
-        ret = inflate(&stream, Z_FINISH);
-        if (ret != Z_OK && ret != Z_STREAM_END && ret != Z_BUF_ERROR) {
-            av_log(avctx, AV_LOG_ERROR, "zlib inflate error(%d): %s\n", ret, stream.msg);
-            inflateEnd(&stream);
-            av_free(buf);
-            return AVERROR(EINVAL);
-        }
-
-        if (stream.avail_out == 0) {
-            buf_size += CHUNK_SIZE;
-            tmp = av_realloc(buf, buf_size);
-            if (!tmp) {
-                inflateEnd(&stream);
-                av_free(buf);
-                return AVERROR(ENOMEM);
-            }
-            buf = tmp;
-        }
-    } while (ret != Z_STREAM_END);
-
     // NULL-terminate string
-    // there is guaranteed to be space for this, due to condition in loop
-    buf[stream.total_out] = 0;
-
-    inflateEnd(&stream);
+    buf[uncompressed_size] = 0;
 
     ret = CHECK_CU(cu->cuModuleLoadData(cu_module, buf));
+fail:
     av_free(buf);
     return ret;
 #else

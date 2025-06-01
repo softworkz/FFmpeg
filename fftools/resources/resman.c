@@ -33,9 +33,8 @@
 
 #include "resman.h"
 #include "libavutil/avassert.h"
-#include "libavutil/pixdesc.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/dict.h"
-#include "libavutil/common.h"
 
 extern const unsigned char ff_graph_html_data[];
 extern const unsigned int ff_graph_html_len;
@@ -67,50 +66,23 @@ static ResourceManagerContext resman_ctx = { .class = &resman_class };
 
 static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, unsigned in_len, char **out)
 {
-    z_stream strm;
-    unsigned chunk = 65534;
-    int ret;
-    uint8_t *buf;
-
-    *out = NULL;
-    memset(&strm, 0, sizeof(strm));
-
     // Allocate output buffer with extra byte for null termination
-    buf = (uint8_t *)av_mallocz(chunk + 1);
+    uint32_t uncompressed_size = AV_RN32(in);
+    uint8_t *buf = av_malloc(uncompressed_size + 1);
     if (!buf) {
         av_log(ctx, AV_LOG_ERROR, "Failed to allocate decompression buffer\n");
         return AVERROR(ENOMEM);
     }
-
-    // 15 + 16 tells zlib to detect GZIP or zlib automatically
-    ret = inflateInit(&strm);
-    if (ret != Z_OK) {
-        av_log(ctx, AV_LOG_ERROR, "Error during zlib initialization: %s\n", strm.msg);
-        av_free(buf);
-        return AVERROR(ENOSYS);
-    }
-
-    strm.avail_in  = in_len;
-    strm.next_in   = in;
-    strm.avail_out = chunk;
-    strm.next_out  = buf;
-
-    ret = inflate(&strm, Z_FINISH);
-    if (ret != Z_OK && ret != Z_STREAM_END) {
-        av_log(ctx, AV_LOG_ERROR, "Inflate failed: %d, %s\n", ret, strm.msg);
-        inflateEnd(&strm);
+    uLongf buf_size = uncompressed_size;
+    int ret = uncompress(buf, &buf_size, in + 4, in_len);
+    if (ret != Z_OK || uncompressed_size != buf_size) {
+        av_log(ctx, AV_LOG_ERROR, "Error uncompressing resource. zlib returned %d\n", ret);
         av_free(buf);
         return AVERROR_EXTERNAL;
     }
 
-    if (strm.avail_out == 0) {
-        // TODO: Error or loop decoding?
-        av_log(ctx, AV_LOG_WARNING, "Decompression buffer may be too small\n");
-    }
+    buf[uncompressed_size] = 0; // Ensure null termination
 
-    buf[chunk - strm.avail_out] = 0; // Ensure null termination
-
-    inflateEnd(&strm);
     *out = (char *)buf;
     return 0;
 }
