@@ -38,7 +38,7 @@
 #define MAX_BUF_SIZE UINT32_MAX
 
 static int read_file_and_compress(unsigned char **compressed_datap, uint32_t *compressed_sizep,
-                                  FILE *input)
+                                  uint32_t *uncompressed_sizep, FILE *input)
 {
     z_stream zstream = { 0 };
     int ret, zret = deflateInit(&zstream, 9);
@@ -46,7 +46,7 @@ static int read_file_and_compress(unsigned char **compressed_datap, uint32_t *co
     if (zret != Z_OK)
         return -1;
 
-    uint32_t buffer_size = 0, compressed_size = 0;
+    uint32_t buffer_size = 0, compressed_size = 0, uncompressed_size = 0;
     unsigned char *compressed_data = NULL;
     int flush = Z_NO_FLUSH;
 
@@ -55,6 +55,12 @@ static int read_file_and_compress(unsigned char **compressed_datap, uint32_t *co
         size_t read = fread(tmp, 1, sizeof(tmp), input);
         if (read < sizeof(tmp))
             flush = Z_FINISH;
+
+        uncompressed_size += read;
+        if (uncompressed_size < read) { // overflow
+            ret = -1;
+            goto fail;
+        }
 
         zstream.next_in  = tmp;
         zstream.avail_in = read;
@@ -92,6 +98,7 @@ static int read_file_and_compress(unsigned char **compressed_datap, uint32_t *co
     deflateEnd(&zstream);
     *compressed_datap = compressed_data;
     *compressed_sizep = compressed_size;
+    *uncompressed_sizep = uncompressed_size;
 
     return 0;
 fail:
@@ -101,16 +108,27 @@ fail:
     return ret;
 }
 
+/// Write a 32bit integer according to the target's endianness.
+static void write_u32(FILE *output, uint32_t num)
+{
+    for (int i = 0; i < 4; ++i)
+        fprintf(output, "0x%02x, ",
+                (num >> (HAVE_BIGENDIAN ? (24 - 8 * i) : 8 * i)) & 0xff);
+}
+
 static int handle_compressed_file(FILE *input, FILE *output, unsigned *compressed_sizep)
 {
     unsigned char *compressed_data;
-    uint32_t compressed_size;
+    uint32_t compressed_size, uncompressed_size;
 
-    int err = read_file_and_compress(&compressed_data, &compressed_size, input);
+    int err = read_file_and_compress(&compressed_data, &compressed_size,
+                                     &uncompressed_size, input);
     if (err)
         return err;
 
     *compressed_sizep = compressed_size;
+
+    write_u32(output, uncompressed_size);
 
     for (unsigned i = 0; i < compressed_size; ++i)
         fprintf(output, "0x%02x, ", compressed_data[i]);
