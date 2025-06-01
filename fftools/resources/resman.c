@@ -65,7 +65,7 @@ static ResourceManagerContext resman_ctx = { .class = &resman_class };
 
 #if CONFIG_RESOURCE_COMPRESSION
 
-static int decompress_gzip(ResourceManagerContext *ctx, uint8_t *in, unsigned in_len, char **out, size_t *out_len)
+static int decompress_zlib(ResourceManagerContext *ctx, uint8_t *in, unsigned in_len, char **out, size_t *out_len)
 {
     z_stream strm;
     unsigned chunk = 65534;
@@ -83,7 +83,7 @@ static int decompress_gzip(ResourceManagerContext *ctx, uint8_t *in, unsigned in
     }
 
     // 15 + 16 tells zlib to detect GZIP or zlib automatically
-    ret = inflateInit2(&strm, 15 + 16);
+    ret = inflateInit(&strm);
     if (ret != Z_OK) {
         av_log(ctx, AV_LOG_ERROR, "Error during zlib initialization: %s\n", strm.msg);
         av_free(buf);
@@ -156,7 +156,7 @@ char *ff_resman_get_string(FFResourceId resource_id)
         char *out = NULL;
         size_t out_len;
 
-        int ret = decompress_gzip(ctx, (uint8_t *)resource_definition.data, *resource_definition.data_len, &out, &out_len);
+        int ret = decompress_zlib(ctx, (uint8_t *)resource_definition.data, *resource_definition.data_len, &out, &out_len);
 
         if (ret) {
             av_log(ctx, AV_LOG_ERROR, "Unable to decompress the resource with ID %d\n", resource_id);

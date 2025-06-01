@@ -43,7 +43,7 @@ int ff_cuda_load_module(void *avctx, AVCUDADeviceContext *hwctx, CUmodule *cu_mo
     uint64_t buf_size;
     int ret;
 
-    if (inflateInit2(&stream, 32 + 15) != Z_OK) {
+    if (inflateInit(&stream) != Z_OK) {
         av_log(avctx, AV_LOG_ERROR, "Error during zlib initialisation: %s\n", stream.msg);
         return AVERROR(ENOSYS);
     }
