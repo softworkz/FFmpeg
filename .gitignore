@@ -25,7 +25,6 @@
 *.metallib.c
 *.ptx
 *.ptx.c
-*.ptx.gz
 *_g
 \#*
 .\#*

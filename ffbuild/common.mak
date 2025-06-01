@@ -113,7 +113,7 @@ COMPILE_LASX = $(call COMPILE,CC,LASXFLAGS)
 	$(Q)echo '#include "$*.h"' >$@
 
 $(BIN2CEXE): ffbuild/bin2c_host.o
-	$(HOSTLD) $(HOSTLDFLAGS) $(HOSTLD_O) $^ $(HOSTEXTRALIBS)
+	$(HOSTLD) $(HOSTLDFLAGS) $(HOSTLD_O) $^ $(HOSTEXTRALIBS) $(if $(CONFIG_PTX_COMPRESSION)$(CONFIG_RESOURCE_COMPRESSION),-lz)
 
 %.metal.air: %.metal
 	$(METALCC) $< -o $@
@@ -127,17 +127,8 @@ $(BIN2CEXE): ffbuild/bin2c_host.o
 %.ptx: %.cu $(SRC_PATH)/compat/cuda/cuda_runtime.h
 	$(COMPILE_NVCC)
 
-ifdef CONFIG_PTX_COMPRESSION
-%.ptx.gz: TAG = GZIP
-%.ptx.gz: %.ptx
-	$(M)gzip -nc9 $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) >$@
-
-%.ptx.c: %.ptx.gz $(BIN2CEXE)
-	$(BIN2C) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) $@ $(subst .,_,$(basename $(notdir $@)))
-else
 %.ptx.c: %.ptx $(BIN2CEXE)
-	$(BIN2C) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) $@ $(subst .,_,$(basename $(notdir $@)))
-endif
+	$(BIN2C) $(if $(CONFIG_PTX_COMPRESSION),--compress) $(patsubst $(SRC_PATH)/%,$(SRC_LINK)/%,$<) $@ $(subst .,_,$(basename $(notdir $@)))
 
 # 1) Preprocess CSS to a minified version
 %.css.min: TAG = SED
@@ -148,36 +139,13 @@ endif
 	| sed 's/^ //; s/ $$//' \
 	> $@
 
-ifdef CONFIG_RESOURCE_COMPRESSION
-
-# 2) Gzip the minified CSS
-%.css.min.gz: TAG = GZIP
-%.css.min.gz: %.css.min
-	$(M)gzip -nc9 $< > $@
-
-# 3) Convert the gzipped CSS to a .c array
-%.css.c: %.css.min.gz $(BIN2CEXE)
-	$(BIN2C) $< $@ $(subst .,_,$(basename $(notdir $@)))
-
-# 4) Gzip the HTML file (no minification needed)
-%.html.gz: TAG = GZIP
-%.html.gz: %.html
-	$(M)gzip -nc9 $< > $@
-
-# 5) Convert the gzipped HTML to a .c array
-%.html.c: %.html.gz $(BIN2CEXE)
-	$(BIN2C) $< $@ $(subst .,_,$(basename $(notdir $@)))
-
-else   # NO COMPRESSION
-
 # 2) Convert the minified CSS to a .c array
 %.css.c: %.css.min $(BIN2CEXE)
-	$(BIN2C) $< $@ $(subst .,_,$(basename $(notdir $@)))
+	$(BIN2C) $(if $(CONFIG_RESOURCE_COMPRESSION),--compress) $< $@ $(subst .,_,$(basename $(notdir $@)))
 
 # 3) Convert the plain HTML to a .c array
 %.html.c: %.html $(BIN2CEXE)
-	$(BIN2C) $< $@ $(subst .,_,$(basename $(notdir $@)))
-endif
+	$(BIN2C) $(if $(CONFIG_RESOURCE_COMPRESSION),--compress) $< $@ $(subst .,_,$(basename $(notdir $@)))
 
 clean::
 	$(RM) $(BIN2CEXE) $(CLEANSUFFIXES:%=ffbuild/%)
@@ -232,7 +200,7 @@ PTXOBJS      = $(filter %.ptx.o,$(OBJS))
 RESOURCEOBJS = $(filter %.css.o %.html.o,$(OBJS))
 $(HOBJS):     CCFLAGS += $(CFLAGS_HEADERS)
 checkheaders: $(HOBJS)
-.SECONDARY:   $(HOBJS:.o=.c) $(PTXOBJS:.o=.c) $(PTXOBJS:.o=.gz) $(PTXOBJS:.o=) $(RESOURCEOBJS:.o=.c) $(RESOURCEOBJS:%.css.o=%.css.min) $(RESOURCEOBJS:%.css.o=%.css.min.gz) $(RESOURCEOBJS:%.html.o=%.html.gz) $(RESOURCEOBJS:.o=)
+.SECONDARY:   $(HOBJS:.o=.c) $(PTXOBJS:.o=.c) $(PTXOBJS:.o=) $(RESOURCEOBJS:.o=.c) $(RESOURCEOBJS:%.css.o=%.css.min) $(RESOURCEOBJS:.o=)
 
 alltools: $(TOOLS)
 
@@ -252,7 +220,7 @@ $(TOOLOBJS): | tools
 
 OUTDIRS := $(OUTDIRS) $(dir $(OBJS) $(HOBJS) $(HOSTOBJS) $(SHLIBOBJS) $(STLIBOBJS) $(TESTOBJS))
 
-CLEANSUFFIXES     = *.d *.gcda *.gcno *.h.c *.ho *.map *.o *.objs *.pc *.ptx *.ptx.gz *.ptx.c *.ver *.version *.html.gz *.html.c *.css.gz *.css.c  *$(DEFAULT_X86ASMD).asm *~ *.ilk *.pdb
+CLEANSUFFIXES     = *.d *.gcda *.gcno *.h.c *.ho *.map *.o *.objs *.pc *.ptx *.ptx.c *.ver *.version *.html.c *.css.c  *$(DEFAULT_X86ASMD).asm *~ *.ilk *.pdb
 LIBSUFFIXES       = *.a *.lib *.so *.so.* *.dylib *.dll *.def *.dll.a
 
 define RULES
