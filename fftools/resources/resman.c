@@ -100,7 +100,7 @@ static int decompress_zlib(ResourceManagerContext *ctx, uint8_t *in, unsigned in
         av_log(ctx, AV_LOG_ERROR, "Inflate failed: %d, %s\n", ret, strm.msg);
         inflateEnd(&strm);
         av_free(buf);
-        return (ret == Z_STREAM_END) ? Z_OK : ((ret == Z_OK) ? Z_BUF_ERROR : ret);
+        return AVERROR_EXTERNAL;
     }
 
     if (strm.avail_out == 0) {
@@ -113,7 +113,7 @@ static int decompress_zlib(ResourceManagerContext *ctx, uint8_t *in, unsigned in
 
     inflateEnd(&strm);
     *out = (char *)buf;
-    return Z_OK;
+    return 0;
 }
 #endif
 
