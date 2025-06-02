@@ -25,10 +25,13 @@
 
 #include "config.h"
 
-#include <string.h>
+#include <stddef.h>
 
 #if CONFIG_RESOURCE_COMPRESSION
 #include <zlib.h>
+#include "libavutil/intreadwrite.h"
+#include "libavutil/mem.h"
+#include "libavutil/thread.h"
 #endif
 
 #include "resman.h"
