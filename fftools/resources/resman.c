@@ -95,12 +95,12 @@ void ff_resman_uninit(void)
 }
 
 
-char *ff_resman_get_string(FFResourceId resource_id)
+const char *ff_resman_get_string(FFResourceId resource_id)
 {
     ResourceManagerContext *ctx = &resman_ctx;
     const FFResourceDefinition *resource_definition = NULL;
     AVDictionaryEntry *dic_entry;
-    char *res = NULL;
+    const char *res = NULL;
 
     for (unsigned i = 0; i < FF_ARRAY_ELEMS(resource_definitions); ++i) {
         const FFResourceDefinition *def = &resource_definitions[i];
