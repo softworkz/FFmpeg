@@ -21,14 +21,6 @@
 #ifndef FFTOOLS_RESOURCES_RESMAN_H
 #define FFTOOLS_RESOURCES_RESMAN_H
 
-#include <stdint.h>
-
-#include "config.h"
-#include "fftools/ffmpeg.h"
-#include "libavutil/avutil.h"
-#include "libavutil/bprint.h"
-#include "fftools/textformat/avtextformat.h"
-
 typedef enum {
     FF_RESOURCE_GRAPH_CSS,
     FF_RESOURCE_GRAPH_HTML,
