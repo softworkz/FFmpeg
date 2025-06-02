@@ -34,32 +34,29 @@
 #include "resman.h"
 #include "libavutil/avassert.h"
 #include "libavutil/intreadwrite.h"
-#include "libavutil/dict.h"
 
 extern const unsigned char ff_graph_html_data[];
 extern const unsigned char ff_graph_css_data[];
 
 static const FFResourceDefinition resource_definitions[] = {
-    [FF_RESOURCE_GRAPH_CSS]   = { FF_RESOURCE_GRAPH_CSS,   "graph.css",   ff_graph_css_data  },
-    [FF_RESOURCE_GRAPH_HTML]  = { FF_RESOURCE_GRAPH_HTML,  "graph.html",  ff_graph_html_data },
+    [FF_RESOURCE_GRAPH_CSS]   = { FF_RESOURCE_GRAPH_CSS,   ff_graph_css_data  },
+    [FF_RESOURCE_GRAPH_HTML]  = { FF_RESOURCE_GRAPH_HTML,  ff_graph_html_data },
 };
 
-
+#if CONFIG_RESOURCE_COMPRESSION
 static const AVClass resman_class = {
     .class_name = "ResourceManager",
 };
 
 typedef struct ResourceManagerContext {
     const AVClass *class;
-    AVDictionary *resource_dic;
+    char *resources[FF_ARRAY_ELEMS(resource_definitions)];
 } ResourceManagerContext;
 
 static AVMutex mutex = AV_MUTEX_INITIALIZER;
 
 static ResourceManagerContext resman_ctx = { .class = &resman_class };
 
-
-#if CONFIG_RESOURCE_COMPRESSION
 
 static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, char **out)
 {
@@ -87,76 +84,51 @@ static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, char 
 
 void ff_resman_uninit(void)
 {
+#if CONFIG_RESOURCE_COMPRESSION
     ff_mutex_lock(&mutex);
 
-    av_dict_free(&resman_ctx.resource_dic);
+    for (size_t i = 0; i < FF_ARRAY_ELEMS(resman_ctx.resources); ++i)
+        av_freep(&resman_ctx.resources[i]);
 
     ff_mutex_unlock(&mutex);
+#endif
 }
 
 
 const char *ff_resman_get_string(FFResourceId resource_id)
 {
-    ResourceManagerContext *ctx = &resman_ctx;
     const FFResourceDefinition *resource_definition = NULL;
-    AVDictionaryEntry *dic_entry;
     const char *res = NULL;
+    av_unused unsigned idx;
 
     for (unsigned i = 0; i < FF_ARRAY_ELEMS(resource_definitions); ++i) {
         const FFResourceDefinition *def = &resource_definitions[i];
         if (def->resource_id == resource_id) {
             resource_definition = def;
+            idx = i;
             break;
         }
     }
 
     av_assert1(resource_definition);
 
+#if CONFIG_RESOURCE_COMPRESSION
     ff_mutex_lock(&mutex);
 
-    dic_entry = av_dict_get(ctx->resource_dic, resource_definition->name, NULL, 0);
+    ResourceManagerContext *ctx = &resman_ctx;
 
-    if (!dic_entry) {
-        int dict_ret;
-
-#if CONFIG_RESOURCE_COMPRESSION
-
-        char *out = NULL;
-
-        int ret = decompress_zlib(ctx, resource_definition->data, &out);
+    if (!ctx->resources[idx]) {
+        int ret = decompress_zlib(ctx, resource_definition->data, &ctx->resources[idx]);
         if (ret) {
             av_log(ctx, AV_LOG_ERROR, "Unable to decompress the resource with ID %d\n", resource_id);
             goto end;
         }
-
-        dict_ret = av_dict_set(&ctx->resource_dic, resource_definition->name, out, 0);
-        if (dict_ret < 0) {
-            av_log(ctx, AV_LOG_ERROR, "Failed to store decompressed resource in dictionary: %d\n", dict_ret);
-            av_freep(&out);
-            goto end;
-        }
-
-        av_freep(&out);
-#else
-
-        dict_ret = av_dict_set(&ctx->resource_dic, resource_definition->name, (const char *)resource_definition->data, 0);
-        if (dict_ret < 0) {
-            av_log(ctx, AV_LOG_ERROR, "Failed to store resource in dictionary: %d\n", dict_ret);
-            goto end;
-        }
-
-#endif
-        dic_entry = av_dict_get(ctx->resource_dic, resource_definition->name, NULL, 0);
-
-        if (!dic_entry) {
-            av_log(ctx, AV_LOG_ERROR, "Failed to retrieve resource from dictionary after storing it\n");
-            goto end;
-        }
     }
-
-    res = dic_entry->value;
-
+    res = ctx->resources[idx];
 end:
     ff_mutex_unlock(&mutex);
+#else
+    res = resource_definition->data;
+#endif
     return res;
 }

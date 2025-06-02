@@ -36,7 +36,6 @@ typedef enum {
 
 typedef struct FFResourceDefinition {
     FFResourceId resource_id;
-    const char *name;
 
     const unsigned char *data;
 } FFResourceDefinition;
