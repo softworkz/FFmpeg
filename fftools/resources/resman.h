@@ -43,6 +43,6 @@ typedef struct FFResourceDefinition {
 
 void ff_resman_uninit(void);
 
-char *ff_resman_get_string(FFResourceId resource_id);
+const char *ff_resman_get_string(FFResourceId resource_id);
 
 #endif /* FFTOOLS_RESOURCES_RESMAN_H */
