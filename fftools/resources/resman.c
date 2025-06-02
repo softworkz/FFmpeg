@@ -65,7 +65,7 @@ static ResourceManagerContext resman_ctx = { .class = &resman_class };
 
 #if CONFIG_RESOURCE_COMPRESSION
 
-static int decompress_zlib(ResourceManagerContext *ctx, uint8_t *in, unsigned in_len, char **out, size_t *out_len)
+static int decompress_zlib(ResourceManagerContext *ctx, const uint8_t *in, unsigned in_len, char **out)
 {
     z_stream strm;
     unsigned chunk = 65534;
@@ -108,8 +108,7 @@ static int decompress_zlib(ResourceManagerContext *ctx, uint8_t *in, unsigned in
         av_log(ctx, AV_LOG_WARNING, "Decompression buffer may be too small\n");
     }
 
-    *out_len = chunk - strm.avail_out;
-    buf[*out_len] = 0; // Ensure null termination
+    buf[chunk - strm.avail_out] = 0; // Ensure null termination
 
     inflateEnd(&strm);
     *out = (char *)buf;
@@ -154,9 +153,8 @@ char *ff_resman_get_string(FFResourceId resource_id)
 #if CONFIG_RESOURCE_COMPRESSION
 
         char *out = NULL;
-        size_t out_len;
 
-        int ret = decompress_zlib(ctx, (uint8_t *)resource_definition.data, *resource_definition.data_len, &out, &out_len);
+        int ret = decompress_zlib(ctx, resource_definition.data, *resource_definition.data_len, &out);
 
         if (ret) {
             av_log(ctx, AV_LOG_ERROR, "Unable to decompress the resource with ID %d\n", resource_id);
