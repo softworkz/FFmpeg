@@ -82,6 +82,83 @@ char *av_strnstr(const char *haystack, const char *needle, size_t hay_length)
     return NULL;
 }
 
+int64_t av_strrcspn(const char *str, const char *charset)
+{
+    if (!str || !*str)
+        return 0;
+
+    if (!charset || !*charset)
+        return -1;
+
+    size_t set_len = strlen(charset);
+
+    if (charset[1] == '\0') {                     /* one byte */
+        const char *last = NULL;
+        for (const unsigned char *p = (const unsigned char *)str; *p; ++p)
+            if (*p == (unsigned char)charset[0])
+                last = (const char *)p;
+        return last ? (int64_t)(last - str) : -1;
+    }
+
+    ////if (charset[2] == '\0') {                     /* two bytes */
+    ////    unsigned char c0 = (unsigned char)charset[0];
+    ////    unsigned char c1 = (unsigned char)charset[1];
+    ////    const char *last = NULL;
+    ////    for (const unsigned char *p = (const unsigned char *)str; *p; ++p)
+    ////        if (*p == c0 || *p == c1)
+    ////            last = (const char *)p;
+    ////    return last ? (int64_t)(last - str) : -1;
+    ////}
+
+
+    if (charset[3] == '\0') {                     /* thre bytes */
+        char c0 = charset[0];
+        char c1 = charset[1];
+        char c2 = charset[2];
+        const char *last = NULL;
+        for (const char *p = str; *p; ++p) {
+            if (*p == c0 || *p == c1 || *p == c2)
+                last = p;
+        }
+        return last ? last - str : -1;
+    }
+
+    size_t len = strlen(str);
+
+    if (set_len == 1) {
+        char c0 = charset[0];
+        for (size_t i = len; i-- > 0;) {
+            if (str[i] == c0)
+                return i;
+        }
+    } else if (set_len == 2) {
+        char c0 = charset[0];
+        char c1 = charset[1];
+        for (size_t i = len; i-- > 0;) {
+            if (str[i] == c0 || str[i] == c1)
+                return i;
+        }
+    } else if (len * set_len < len + 256) {
+        for (size_t i = len; i-- > 0;) {
+            for (size_t n = 0; n < set_len; n++) {
+                if (str[i] == charset[n])
+                    return i;
+            }
+        }
+    } else {
+        uint8_t present[256] = { 0 };
+        for (size_t n = 0; n < set_len; n++)
+            present[(unsigned char)charset[n]] = 1;
+
+        for (size_t i = len; i-- > 0;) {
+            if (present[(unsigned char)str[i]])
+                return (int64_t)i;
+        }
+    }
+
+    return -1;
+}
+
 size_t av_strlcpy(char *dst, const char *src, size_t size)
 {
     size_t len = 0;
@@ -251,6 +328,26 @@ char *av_strireplace(const char *str, const char *from, const char *to)
 
 const char *av_basename(const char *path)
 {
+    if (!path || *path == '\0')
+        return ".";
+
+#if HAVE_DOS_PATHS
+    int64_t pos = av_strrcspn(path, "/\\:");
+#else
+    int64_t pos = av_strrcspn(path, "/");
+#endif
+
+    if (pos < 0)
+        return path;
+
+    if (path[pos] == ':')
+        pos = strcspn(path, ":");
+
+    return path + pos + 1;
+}
+
+const char *av_basename_old(const char *path)
+{
     char *p;
 #if HAVE_DOS_PATHS
     char *q, *d;
@@ -273,6 +370,30 @@ const char *av_basename(const char *path)
 }
 
 const char *av_dirname(char *path)
+{
+    if (!path || !*path)
+        return ".";
+
+#if HAVE_DOS_PATHS
+    int64_t pos = av_strrcspn(path, "/\\:");
+#else
+    int64_t pos = av_strrcspn(path, "/");
+#endif
+
+    if (pos < 0)
+        return ".";
+
+    if (path[pos] == ':') {
+        pos = strcspn(path, ":");
+        pos++;
+    }
+
+    path[pos] = '\0';
+
+    return path;
+}
+
+const char *av_dirname_old(char *path)
 {
     char *p = path ? strrchr(path, '/') : NULL;
 

@@ -83,6 +83,20 @@ char *av_stristr(const char *haystack, const char *needle);
 char *av_strnstr(const char *haystack, const char *needle, size_t hay_length);
 
 /**
+ * Determine the index of the last position in str with an occurence of any
+ * of the characters in charset.
+ *
+ * Returns 0 if str is empty.
+ * Returns -1 if charset is empty or no occurrence has been found.
+ *
+ * @param str        string to search in
+ * @param charset    sequence of chars to search for
+ * @return           index of the last position of any of the chars in charset
+ *                   or -1 if no match
+ */
+int64_t av_strrcspn(const char *str, const char *charset);
+
+/**
  * Copy the string src to dst, but no more than size - 1 bytes, and
  * null-terminate dst.
  *
@@ -278,6 +292,8 @@ char *av_strireplace(const char *str, const char *from, const char *to);
  */
 const char *av_basename(const char *path);
 
+const char *av_basename_old(const char *path);
+
 /**
  * Thread safe dirname.
  * @param path the string to parse, on DOS both \ and / are considered separators.
@@ -287,6 +303,8 @@ const char *av_basename(const char *path);
  * @note the function may modify the contents of the path, so copies should be passed.
  */
 const char *av_dirname(char *path);
+
+const char *av_dirname_old(char *path);
 
 /**
  * Match instances of a name in a comma-separated list of names.

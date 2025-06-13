@@ -962,6 +962,163 @@ static int64_t getmaxrss(void)
 
 int main(int argc, char **argv)
 {
+    /* ---------- BEGIN paste block ----------------------------------------- */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include "libavutil/time.h"          /* av_gettime_relative() */
+
+    /* 1. edge-case baseline paths ----------------------------------------- */
+    static const char *base_paths[] = { 
+        "", ".", "/", "//", "///",
+        "file", "dir/file", "/usr/local/bin/ffmpeg",
+        "/tricky/..//slash/", "ends/with/slash/",
+    #if HAVE_DOS_PATHS
+        "C:", "C:foo", "C:foo\\bar", "C:\\foo\\bar\\baz.exe",
+        "C:/mix\\slash/", "C::weird", ":onlycolon",
+        "C:/", "C:\\", "\\\\server\\share\\file",
+    #endif
+    };
+    const size_t n_base = sizeof(base_paths) / sizeof(base_paths[0]);
+
+    /* 2. TEN realistic long paths (hard-coded, no malloc) ------------------ */
+#if HAVE_DOS_PATHS
+    static const char *long_paths[] = {
+        "C:\\very\\long\\windows\\path\\with\\multiple\\segments\\and\\a"
+        "reallyreallyreallylongdirectorynamethatkeepsgoingwithoutbreaks\\file.txt",
+
+        "C:\\Users\\Public\\Videos\\Sample Videos\\holiday_compilation_2024_"
+        "super_high_resolution_full_length_with_director_commentary_final_final.mp4",
+
+        "C:\\ProgramData\\Company\\Product\\v12.34.56\\resources\\locale\\en_US\\data\\"
+        "super_long_resource_bundle_name_that_seems_never_to_end.bin",
+
+        "\\\\Server\\Share\\Department\\Team\\Project\\Phase2\\Deliverables\\2025\\April\\Final\\"
+        "supercalifragilisticexpialidocious_document.docx",
+
+        "C:\\Windows\\System32\\drivers\\etc\\really_really_really_really_long_host_file_"
+        "that_goes_on_forever_and_ever_and_ever_hosts",
+
+        "C:\\path_with_no_separators_but_a_very_very_very_very_long_single_segment_that_"
+        "exceeds_normal_expectations_and_tests_edge_cases.bat",
+
+        "C:\\Backup\\2025\\06\\13\\very_long_backup_filename_that_describes_everything_"
+        "about_the_backup_and_then_some_more_information.zip",
+
+        "C:\\Path\\with\\multiple\\levels\\and\\a\\super_long_final_filename_like_"
+        "this_is_the_song_that_never_ends_it_just_goes_on_and_on_my_friends.flac",
+
+        "D:\\MediaLibrary\\Movies\\2025\\SciFi\\An_Unnecessarily_Long_Movie_Title_That_"
+        "Might_Break_Older_Software_But_Shouldnt_Bother_FFmpeg.mkv",
+
+        "E:\\x\\y\\z\\a_very_long_filename_with_plenty_of_characters_0123456789_"
+        "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ.data"
+    };
+#else /* POSIX-style */
+    static const char *long_paths[] = {
+        "/this/is/a/very/long/path/with/a/single/"
+        "reallyreallyreallylongsegmentthatgoesonalmostforever1234567890/end",
+
+        "/var/lib/verylongdirectoryname12345678901234567890/"
+        "anotherlongsegment/filename.ext",
+
+        "/home/user/Documents/Projects/OpenSource/FFmpeg/benchmarks/inputs/ultra/"
+        "long/input/file/that/should/be/handled/correctly.avi",
+
+        "/mnt/networkshare/projects/2025/q2/"
+        "some_extremely_long_file_name_version3.4.5_build9876543210_release_candidate.tar.gz",
+
+        "/opt/application/releases/2025.06.13/build_99999/output/"
+        "some_super_long_named_executable_that_pushes_limits_of_filesystems",
+
+        "/srv/www/htdocs/a_very_long_url_path_that_is_actually_on_disk/and_contains/"
+        "everything/including_the_kitchen_sink/index.html",
+
+        "/usr/local/share/doc/"
+        "veryveryveryveryveryveryveryverylongpackagename-12.34.56/examples/"
+        "another_extremely_long_example_filename.txt",
+
+        "/tmp/"
+        "tmpaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+
+        "/backup/2025/June/13/incremental/"
+        "backup_of_home_users_complete_with_every_single_file_ever_created_since_1990.tar.gz",
+
+        "/data/logs/service/instance-01/2025/06/13/15/30/45/"
+        "some_really_long_log_file_name_that_tests_rotation_and_handling.log"
+    };
+#endif
+    const size_t n_long = sizeof(long_paths) / sizeof(long_paths[0]);
+
+    /* 3. merge the two arrays --------------------------------------------- */
+    const size_t N = n_base + n_long;
+    const char **paths = (const char **)malloc(N * sizeof(*paths));
+    if (!paths) { perror("malloc"); exit(1); }
+
+    memcpy(paths, base_paths, n_base * sizeof(*paths));
+    memcpy(paths + n_base, long_paths, n_long * sizeof(*paths));
+
+    /* 4. list all paths ---------------------------------------------------- */
+    puts("\n--- test paths -----------------------------------------------------");
+    for (size_t i = 0; i < N; ++i)
+        printf("[%2zu] len=%4zu  \"%s\"\n", i, strlen(paths[i]), paths[i]);
+    puts("--------------------------------------------------------------------\n");
+
+    /* 5. verify new == old ------------------------------------------------- */
+    for (size_t i = 0; i < N; ++i) {
+        const char *pn = av_basename(paths[i]);
+        const char *po = av_basename_old(paths[i]);
+        if (pn != po) {
+            fprintf(stderr, "Mismatch at index %zu: \"%s\"\n", i, paths[i]);
+            exit(1);
+        }
+    }
+
+    /* 6. benchmark --------------------------------------------------------- */
+#define REPS 100000                       /* calls per path per version */
+#define TIME_US() av_gettime_relative()   /* monotonic µs */
+
+    volatile const char *sink;                /* stop optimiser             */
+    int64_t t0, t1;                           /* microseconds                */
+    double ns_new, ns_old;
+
+    for (int r = 0; r < REPS; ++r)
+        for (size_t i = 0; i < N; ++i)
+            sink = av_basename(paths[i]);
+    for (int r = 0; r < REPS; ++r)
+        for (size_t i = 0; i < N; ++i)
+            sink = av_basename_old(paths[i]);
+
+    /* new ----------------------------------------------------------------- */
+    t0 = TIME_US();
+    for (int r = 0; r < REPS; ++r)
+        for (size_t i = 0; i < N; ++i)
+            sink = av_basename(paths[i]);
+    t1 = TIME_US();
+    ns_new = (double)(t1 - t0) * 1000.0 / (REPS * N);
+
+    /* old ----------------------------------------------------------------- */
+    t0 = TIME_US();
+    for (int r = 0; r < REPS; ++r)
+        for (size_t i = 0; i < N; ++i)
+            sink = av_basename_old(paths[i]);
+    t1 = TIME_US();
+    ns_old = (double)(t1 - t0) * 1000.0 / (REPS * N);
+
+    /* 7. report ------------------------------------------------------------ */
+    printf("av_basename() benchmark  (paths=%zu, REPS=%d)\n", N, REPS);
+    printf("new : %.1f ns / call\n", ns_new);
+    printf("old : %.1f ns / call\n", ns_old);
+    printf("speed-up: %.2fx\n\n", ns_old / ns_new);
+
+    /* 8. clean-up ---------------------------------------------------------- */
+    free((void *)paths);
+    /* ---------- END paste block ------------------------------------------ */
+}
+
+static int mai1n(int argc, char **argv)
+{
     Scheduler *sch = NULL;
 
     int ret;
