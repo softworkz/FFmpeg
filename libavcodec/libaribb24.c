@@ -281,8 +281,7 @@ next_region:
         av_log(avctx, AV_LOG_DEBUG, "Styled ASS line: %s\n",
                buf.str);
 
-        sub->format = 1; /* text */
-        ret = ff_ass_add_rect(sub, buf.str, b24->read_order++,
+        ret = avpriv_ass_add_rect(sub, buf.str, b24->read_order++,
                               0, NULL, NULL);
     }
 
