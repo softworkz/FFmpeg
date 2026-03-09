@@ -5,6 +5,8 @@ APITESTPROGS-yes += api-seek api-dump-stream-meta
 APITESTPROGS-$(call DEMDEC, H263, H263) += api-band
 APITESTPROGS-$(HAVE_THREADS) += api-threadmessage
 APITESTPROGS-yes += api-codec-par-properties
+APITESTPROGS-$(CONFIG_AC4_DECODER) += api-ac4
+APITESTPROGS-$(CONFIG_MPEGTS_MUXER) += api-ac4-mpegts
 APITESTPROGS += $(APITESTPROGS-yes)
 
 APITESTOBJS  := $(APITESTOBJS:%=$(APITESTSDIR)%) $(APITESTPROGS:%=$(APITESTSDIR)/%-test.o)
