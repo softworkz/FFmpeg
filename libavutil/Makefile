@@ -278,6 +278,7 @@ TESTPROGS = adler32                                                     \
             hash                                                        \
             hmac                                                        \
             hwdevice                                                    \
+            hwdevice_ctx_derive                                         \
             integer                                                     \
             imgutils                                                    \
             lfg                                                         \
