@@ -194,6 +194,7 @@ include $(SRC_PATH)/tests/fate/emby-output-formatting.mak
 include $(SRC_PATH)/tests/fate/emby-qsv-sei.mak
 include $(SRC_PATH)/tests/fate/emby-throttling.mak
 include $(SRC_PATH)/tests/fate/emby-tonemap-cpu.mak
+include $(SRC_PATH)/tests/fate/emby-tonemap-cuda.mak
 include $(SRC_PATH)/tests/fate/emby-mediacodecndk.mak
 include $(SRC_PATH)/tests/fate/emby-segment.mak
 include $(SRC_PATH)/tests/fate/emby-webvtt.mak
