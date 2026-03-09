@@ -1,0 +1,13 @@
+[FRAME]
+[SIDE_DATA]
+side_data_type=H.26[45] User Data Unregistered SEI message
+[/SIDE_DATA]
+[SIDE_DATA]
+side_data_type=Mastering display metadata
+[/SIDE_DATA]
+[SIDE_DATA]
+side_data_type=Content light level metadata
+max_content=1000
+max_average=400
+[/SIDE_DATA]
+[/FRAME]

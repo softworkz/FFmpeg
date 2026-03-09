@@ -1,0 +1,21 @@
+[FRAME]
+[SIDE_DATA]
+side_data_type=H.26[45] User Data Unregistered SEI message
+[/SIDE_DATA]
+[SIDE_DATA]
+side_data_type=Mastering display metadata
+red_x=34000/50000
+red_y=16000/50000
+green_x=13250/50000
+green_y=34500/50000
+blue_x=7500/50000
+blue_y=3000/50000
+white_point_x=15635/50000
+white_point_y=16450/50000
+min_luminance=1/10000
+max_luminance=10000000/10000
+[/SIDE_DATA]
+[SIDE_DATA]
+side_data_type=Content light level metadata
+[/SIDE_DATA]
+[/FRAME]
