@@ -187,6 +187,7 @@ include $(SRC_PATH)/tests/fate/ffmpeg.mak
 include $(SRC_PATH)/tests/fate/ffprobe.mak
 include $(SRC_PATH)/tests/fate/emby-ac4.mak
 include $(SRC_PATH)/tests/fate/emby-filter-format-printing.mak
+include $(SRC_PATH)/tests/fate/emby-hlsenc-logging.mak
 include $(SRC_PATH)/tests/fate/emby-id3v2.mak
 include $(SRC_PATH)/tests/fate/emby-output-formatting.mak
 include $(SRC_PATH)/tests/fate/emby-throttling.mak
