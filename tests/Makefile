@@ -188,6 +188,7 @@ include $(SRC_PATH)/tests/fate/ffprobe.mak
 include $(SRC_PATH)/tests/fate/emby-ac4.mak
 include $(SRC_PATH)/tests/fate/emby-filter-format-printing.mak
 include $(SRC_PATH)/tests/fate/emby-output-formatting.mak
+include $(SRC_PATH)/tests/fate/emby-throttling.mak
 include $(SRC_PATH)/tests/fate/emby-tonemap-cpu.mak
 include $(SRC_PATH)/tests/fate/emby-segment.mak
 include $(SRC_PATH)/tests/fate/emby-webvtt.mak
