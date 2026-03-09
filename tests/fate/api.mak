@@ -22,6 +22,11 @@ fate-lavf-flv: KEEP_FILES ?= 1
 fate-api-seek: CMD = run $(APITESTSDIR)/api-seek-test$(EXESUF) $(TARGET_PATH)/tests/data/lavf/lavf.flv 0 720
 fate-api-seek: CMP = null
 
+FATE_API_LIBAVCODEC-yes += fate-api-codec_par_properties
+fate-api-codec_par_properties: $(APITESTSDIR)/api-codec-par-properties-test$(EXESUF)
+fate-api-codec_par_properties: CMD = run $(APITESTSDIR)/api-codec-par-properties-test$(EXESUF)
+fate-api-codec_par_properties: CMP = null
+
 FATE_API-$(HAVE_THREADS) += fate-api-threadmessage
 fate-api-threadmessage: $(APITESTSDIR)/api-threadmessage-test$(EXESUF)
 fate-api-threadmessage: CMD = run $(APITESTSDIR)/api-threadmessage-test$(EXESUF) 3 10 30 50 2 20 40

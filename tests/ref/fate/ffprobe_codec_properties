@@ -1,0 +1,16 @@
+[STREAM]
+index=0
+codec_type=audio
+[/STREAM]
+[STREAM]
+index=1
+codec_type=video
+closed_captions=0
+film_grain=0
+[/STREAM]
+[STREAM]
+index=2
+codec_type=video
+closed_captions=0
+film_grain=0
+[/STREAM]
