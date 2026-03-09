@@ -193,6 +193,7 @@ include $(SRC_PATH)/tests/fate/emby-id3v2.mak
 include $(SRC_PATH)/tests/fate/emby-output-formatting.mak
 include $(SRC_PATH)/tests/fate/emby-throttling.mak
 include $(SRC_PATH)/tests/fate/emby-tonemap-cpu.mak
+include $(SRC_PATH)/tests/fate/emby-mediacodecndk.mak
 include $(SRC_PATH)/tests/fate/emby-segment.mak
 include $(SRC_PATH)/tests/fate/emby-webvtt.mak
 include $(SRC_PATH)/tests/fate/fifo-muxer.mak
