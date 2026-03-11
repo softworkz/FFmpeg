@@ -151,6 +151,8 @@ int ff_hwframe_map_create(AVBufferRef *hwframe_ref,
  */
 int ff_hwframe_map_replace(AVFrame *dst, const AVFrame *src);
 
+int ff_hwdevice_set_source_ctx(AVHWDeviceContext *ctx, const AVBufferRef *src_ref);
+
 extern const HWContextType ff_hwcontext_type_cuda;
 extern const HWContextType ff_hwcontext_type_d3d11va;
 extern const HWContextType ff_hwcontext_type_d3d12va;

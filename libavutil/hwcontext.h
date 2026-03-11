@@ -41,6 +41,7 @@ enum AVHWDeviceType {
     AV_HWDEVICE_TYPE_AMF,
     /* OpenHarmony Codec device */
     AV_HWDEVICE_TYPE_OHCODEC,
+    AV_HWDEVICE_TYPE_NB,          ///< number of hw device types, do not use directly
 };
 
 /**
@@ -339,6 +340,27 @@ int av_hwdevice_ctx_create_derived_opts(AVBufferRef **dst_ctx,
                                         enum AVHWDeviceType type,
                                         AVBufferRef *src_ctx,
                                         AVDictionary *options, int flags);
+
+/**
+ * Create a new device of the specified type from an existing device, or
+ * return an existing derived device if one already exists.
+ *
+ * This function performs the same action as av_hwdevice_ctx_create_derived,
+ * however, if a derived device of the specified type already exists
+ * (in either direction of the derivation chain), it returns the existing
+ * instance instead of creating a new one.
+ *
+ * @param dst_ctx On success, a reference to the newly-created or
+ *                existing AVHWDeviceContext.
+ * @param type    The type of the new device to create.
+ * @param src_ctx A reference to an existing AVHWDeviceContext which will be
+ *                used to create the new device.
+ * @param flags   Currently unused; should be set to zero.
+ * @return        Zero on success, a negative AVERROR code on failure.
+ */
+int av_hwdevice_ctx_get_or_create_derived(AVBufferRef **dst_ctx,
+                                          enum AVHWDeviceType type,
+                                          AVBufferRef *src_ctx, int flags);
 
 /**
  * Allocate an AVHWFramesContext tied to a given device context.
