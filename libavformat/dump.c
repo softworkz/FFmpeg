@@ -909,6 +909,7 @@ void av_dump_format(AVFormatContext *ic, int index,
         av_log(NULL, AV_LOG_INFO, "\n");
     }
 
+#if 0
     if (ic->nb_chapters)
         av_log(NULL, AV_LOG_INFO, "  Chapters:\n");
     for (i = 0; i < ic->nb_chapters; i++) {
@@ -921,6 +922,7 @@ void av_dump_format(AVFormatContext *ic, int index,
 
         dump_metadata(NULL, ch->metadata, "      ", AV_LOG_INFO);
     }
+#endif
 
     if (ic->nb_programs) {
         int j, k, total = 0;
