@@ -2617,8 +2617,15 @@ static int qsv_device_create(AVHWDeviceContext *ctx, const char *device,
     child_device = (AVHWDeviceContext*)priv->child_device_ctx->data;
 
     impl = choose_implementation(device, child_device_type);
+    ret = qsv_device_derive_from_child(ctx, impl, child_device, 0);
+    if (ret >= 0) {
+        FFHWDeviceContext *ctxi = ffhwdevicectx(ctx);
+        FFHWDeviceContext *child_ctxi = ffhwdevicectx(child_device);
+        ctxi->source_device = av_buffer_ref(priv->child_device_ctx);
+        child_ctxi->derived_device_ids[ctx->type] = ctxi->registered_device_id;
+    }
 
-    return qsv_device_derive_from_child(ctx, impl, child_device, 0);
+    return ret;
 }
 
 const HWContextType ff_hwcontext_type_qsv = {
