@@ -2076,6 +2076,13 @@ int ff_parse_mpeg2_descriptor(AVFormatContext *fc, AVStream *st, int stream_type
                 sti->need_context_update = 1;
             }
         }
+        if (ext_desc_tag == AC4_DESCRIPTOR_TAG_EXTENSION &&
+            st->codecpar->codec_id == AV_CODEC_ID_BIN_DATA) {
+            st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
+            st->codecpar->codec_id   = AV_CODEC_ID_AC4;
+            sti->request_probe = AVPROBE_SCORE_STREAM_RETRY / 5;
+            sti->need_context_update = 1;
+        }
         if (ext_desc_tag == SUPPLEMENTARY_AUDIO_DESCRIPTOR) {
             int flags;
 
