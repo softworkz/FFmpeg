@@ -22,6 +22,7 @@
 extern const char *ff_source_avgblur_cl;
 extern const char *ff_source_colorkey_cl;
 extern const char *ff_source_colorspace_common_cl;
+extern const char *ff_source_colorspace_common2_cl;
 extern const char *ff_source_convolution_cl;
 extern const char *ff_source_deshake_cl;
 extern const char *ff_source_neighbor_cl;
@@ -29,6 +30,8 @@ extern const char *ff_source_nlmeans_cl;
 extern const char *ff_source_overlay_cl;
 extern const char *ff_source_pad_cl;
 extern const char *ff_source_remap_cl;
+extern const char *ff_source_supertonemap_cl;
+extern const char *ff_source-extratonemap_cl;
 extern const char *ff_source_tonemap_cl;
 extern const char *ff_source_transpose_cl;
 extern const char *ff_source_unsharp_cl;

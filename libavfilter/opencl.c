@@ -171,8 +171,8 @@ int ff_opencl_filter_load_program(AVFilterContext *avctx,
         return AVERROR(EIO);
     }
 
-    cle = clBuildProgram(ctx->program, 1, &ctx->hwctx->device_id,
-                         NULL, NULL, NULL);
+    cle = clBuildProgram(ctx->program, 1, &ctx->hwctx->device_id, "-cl-fast-relaxed-math -cl-std=CL2.0",
+                         NULL, NULL);
     if (cle != CL_SUCCESS) {
         av_log(avctx, AV_LOG_ERROR, "Failed to build program: %d.\n", cle);
 
@@ -326,6 +326,19 @@ int ff_opencl_filter_work_size_from_image(AVFilterContext *avctx,
     return 0;
 }
 
+void ff_opencl_print_const_array(AVBPrint *buf, const char *name_str,
+                                      float arr[], int len)
+{
+    int i;
+    av_bprintf(buf, "__constant float %s[%d] = {\n", name_str, len);
+    for (i = 0; i < len; i++) {
+        av_bprintf(buf, " %.5ff,", arr[i]);
+        if (i % 20 == 0)
+            av_bprintf(buf, "\n");
+    }
+    av_bprintf(buf, "};\n");
+}
+
 void ff_opencl_print_const_matrix_3x3(AVBPrint *buf, const char *name_str,
                                       double mat[3][3])
 {
@@ -336,6 +349,18 @@ void ff_opencl_print_const_matrix_3x3(AVBPrint *buf, const char *name_str,
             av_bprintf(buf, " %.5ff,", mat[i][j]);
         av_bprintf(buf, "\n");
     }
+    av_bprintf(buf, "};\n");
+}
+
+void ff_opencl_print_const_matrix_3xfloat3(AVBPrint *buf, const char *name_str,
+                                      double mat[3][3])
+{
+    int j;
+    av_bprintf(buf, "__constant float3 %s[3] = {\n", name_str);
+    for (j = 0; j < 3; j++) {
+        av_bprintf(buf, " (float3)(%.5ff, %.5ff, %.5ff), \n", mat[0][j], mat[1][j], mat[2][j]);
+    }
+    av_bprintf(buf, "\n");
     av_bprintf(buf, "};\n");
 }
 

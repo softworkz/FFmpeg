@@ -487,6 +487,8 @@ extern const FFFilter ff_vf_stereo3d;
 extern const FFFilter ff_vf_streamselect;
 extern const FFFilter ff_vf_subtitles;
 extern const FFFilter ff_vf_super2xsai;
+extern const FFFilter ff_vf_supertonemap_opencl;
+extern const FFFilter ff_vf_extratonemap_opencl;
 extern const FFFilter ff_vf_swaprect;
 extern const FFFilter ff_vf_swapuv;
 extern const FFFilter ff_vf_tblend;
