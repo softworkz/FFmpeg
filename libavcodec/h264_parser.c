@@ -45,6 +45,7 @@
 #include "h264_ps.h"
 #include "h2645_parse.h"
 #include "h264data.h"
+#include "decode.h"
 #include "mpegutils.h"
 #include "parser.h"
 #include "libavutil/refstruct.h"
@@ -565,6 +566,8 @@ static inline int parse_nal_units(AVCodecParserContext *s,
                 av_reduce(&avctx->framerate.den, &avctx->framerate.num,
                           sps->num_units_in_tick * 2, den, 1 << 30);
             }
+
+            ff_set_sar(avctx, sps->vui.sar);
 
             av_freep(&rbsp.rbsp_buffer);
             return 0; /* no need to evaluate the rest */
