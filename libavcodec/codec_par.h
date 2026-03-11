@@ -212,6 +212,10 @@ typedef struct AVCodecParameters {
      * Audio only. Number of samples to skip after a discontinuity.
      */
     int seek_preroll;
+    /**
+     * Codec properties of the stream that gets decoded
+     */
+    unsigned properties;
 } AVCodecParameters;
 
 /**
