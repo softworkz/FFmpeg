@@ -1768,6 +1768,10 @@ static int show_stream(AVTextFormatContext *tfc, AVFormatContext *fmt_ctx, int s
                 print_int("film_grain",      streams_with_film_grain[stream->index]);
             }
         }
+        if (!do_analyze_frames || !dec_ctx) {
+            print_int("closed_captions", !!(par->properties & FF_CODEC_PROPERTY_CLOSED_CAPTIONS));
+            print_int("film_grain", !!(par->properties & FF_CODEC_PROPERTY_FILM_GRAIN));
+        }
         print_int("has_b_frames", par->video_delay);
         sar = av_guess_sample_aspect_ratio(fmt_ctx, stream, NULL);
         if (sar.num) {
