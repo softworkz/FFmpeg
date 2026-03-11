@@ -506,6 +506,7 @@ extern const FFFilter ff_vf_tmidequalizer;
 extern const FFFilter ff_vf_tmix;
 extern const FFFilter ff_vf_supertonemap;
 extern const FFFilter ff_vf_tonemap;
+extern const FFFilter ff_vf_tonemap_cuda;
 extern const FFFilter ff_vf_tonemap_opencl;
 extern const FFFilter ff_vf_tonemap_vaapi;
 extern const FFFilter ff_vf_tpad;
