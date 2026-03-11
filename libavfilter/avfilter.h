@@ -39,6 +39,7 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/avutil.h"
+#include "libavutil/bprint.h"
 #include "libavutil/buffer.h"
 #include "libavutil/dict.h"
 #include "libavutil/frame.h"
@@ -458,6 +459,17 @@ struct AVFilterLink {
  */
 int avfilter_link(AVFilterContext *src, unsigned srcpad,
                   AVFilterContext *dst, unsigned dstpad);
+
+/**
+ * Gets the formats from an AVFilterFormatsConfig.
+ *
+ * @param bp         an instance of AVBPrint
+ * @param filter     the AVFilter
+ * @param for_output set to 1 for filter outputs
+ * @param pad_index  the index of the input or output
+ * @return           zero on success
+ */
+int avfilter_print_config_formats(AVBPrint *bp, const AVFilter *filter, int for_output, unsigned pad_index);
 
 #define AVFILTER_CMD_FLAG_ONE   1 ///< Stop once a filter understood the command (for target=all for example), fast filters are favored automatically
 #define AVFILTER_CMD_FLAG_FAST  2 ///< Only execute command when its fast (like a video out that supports contrast adjustment in hw)

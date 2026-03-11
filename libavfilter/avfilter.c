@@ -226,6 +226,145 @@ static void update_link_current_pts(FilterLinkInternal *li, int64_t pts)
         ff_avfilter_graph_update_heap(li->l.graph, li);
 }
 
+static unsigned get_nb_pix_fmts(void)
+{
+    unsigned i = 0;
+    while (av_pix_fmt_desc_get(i++)) {}
+    return i - 1;
+}
+
+static unsigned get_nb_sample_fmts(void)
+{
+    unsigned i = 0;
+    while (av_get_sample_fmt_name(i++)) {}
+    return i - 1;
+}
+
+int avfilter_print_config_formats(AVBPrint *bp, const AVFilter *filter, int for_output, unsigned pad_index)
+{
+    const FFFilter *fi = fffilter(filter);
+    AVFilterGraph *graph = NULL;
+    AVFilterContext *filter_context = NULL;
+    AVFilterFormatsConfig *config;
+    enum AVMediaType media_type;
+    int ret = 0;
+
+    if (fi->formats_state == FF_FILTER_FORMATS_PASSTHROUGH) {
+        av_bprintf(bp, "All (passthrough)");
+        return 0;
+    }
+
+    graph = avfilter_graph_alloc();
+    if (!graph) {
+        av_log(NULL, AV_LOG_ERROR, "Failed to create filtergraph\n");
+        ret = AVERROR(ENOMEM);
+        goto cleanup;
+    }
+
+    filter_context = avfilter_graph_alloc_filter(graph, filter, "filter");
+    if (!filter_context) {
+        av_log(NULL, AV_LOG_ERROR, "Failed to create filter\n");
+        ret = AVERROR(ENOMEM);
+        goto cleanup;
+    }
+
+    avfilter_init_str(filter_context, NULL);
+
+    if (fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC ||
+        fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC2)
+        av_bprintf(bp, "Dynamic");
+
+    if ((!for_output && pad_index >= filter_context->nb_inputs) ||
+        (for_output && pad_index >= filter_context->nb_outputs))
+        goto cleanup;
+
+    for (unsigned i = 0; i < filter_context->nb_inputs; i++) {
+        AVFilterLink *link = av_mallocz(sizeof(FilterLinkInternal));
+        if (!link) {
+            ret = AVERROR(ENOMEM);
+            goto cleanup;
+        }
+        link->type = avfilter_pad_get_type(filter_context->input_pads, i);
+        filter_context->inputs[i] = link;
+    }
+
+    for (unsigned i = 0; i < filter_context->nb_outputs; i++) {
+        AVFilterLink *link = av_mallocz(sizeof(FilterLinkInternal));
+        if (!link) {
+            ret = AVERROR(ENOMEM);
+            goto cleanup;
+        }
+        link->type = avfilter_pad_get_type(filter_context->output_pads, i);
+        filter_context->outputs[i] = link;
+    }
+
+    if (fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC)
+        fi->formats.query_func(filter_context);
+    else if (fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC2) {
+        AVFilterFormatsConfig **cfg_in = NULL, **cfg_out = NULL;
+
+        if (filter_context->nb_inputs) {
+            cfg_in = av_malloc_array(filter_context->nb_inputs, sizeof(*cfg_in));
+            for (unsigned i = 0; i < filter_context->nb_inputs; i++)
+                cfg_in[i] = &filter_context->inputs[i]->outcfg;
+        }
+        if (filter_context->nb_outputs) {
+            cfg_out = av_malloc_array(filter_context->nb_outputs, sizeof(*cfg_out));
+            for (unsigned i = 0; i < filter_context->nb_outputs; i++)
+                cfg_out[i] = &filter_context->outputs[i]->incfg;
+        }
+
+        fi->formats.query_func2(filter_context, cfg_in, cfg_out);
+        av_freep(&cfg_in);
+        av_freep(&cfg_out);
+    } else {
+        ret = ff_default_query_formats(filter_context);
+        if (ret < 0)
+            goto cleanup;
+    }
+
+    config = for_output ? &filter_context->outputs[pad_index]->incfg : &filter_context->inputs[pad_index]->outcfg;
+
+    if (!config || !config->formats)
+        goto cleanup;
+
+    media_type = for_output ? filter->outputs[pad_index].type : filter->inputs[pad_index].type;
+
+    if (fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC ||
+        fi->formats_state == FF_FILTER_FORMATS_QUERY_FUNC2) {
+        if (config->formats && config->formats->nb_formats)
+            av_bprintf(bp, ", Default: ");
+    }
+
+    if (config->formats == NULL)
+        av_bprintf(bp, "unknown");
+    else if ((media_type == AVMEDIA_TYPE_VIDEO && config->formats->nb_formats == get_nb_pix_fmts()) ||
+             (media_type == AVMEDIA_TYPE_AUDIO && config->formats->nb_formats == get_nb_sample_fmts()))
+        av_bprintf(bp, "All");
+    else {
+        for (unsigned i = 0; i < config->formats->nb_formats; i++) {
+            if (i == 0)
+                av_bprintf(bp, "[");
+
+            if (media_type == AVMEDIA_TYPE_VIDEO)
+                av_bprintf(bp, "%s", av_get_pix_fmt_name(config->formats->formats[i]));
+            else if (media_type == AVMEDIA_TYPE_AUDIO)
+                av_bprintf(bp, "%s", av_get_sample_fmt_name(config->formats->formats[i]));
+            ////else if (media_type == AVMEDIA_TYPE_SUBTITLE)
+            ////    av_bprintf(bp, "%s", av_get_subtitle_fmt_name(config->formats->formats[i]));
+
+            if (i < config->formats->nb_formats - 1)
+                av_bprintf(bp, ", ");
+            else
+                av_bprintf(bp, "]");
+        }
+    }
+
+cleanup:
+    avfilter_graph_free(&graph);
+    return ret;
+}
+
 void ff_filter_set_ready(AVFilterContext *filter, unsigned priority)
 {
     FFFilterContext *ctxi = fffilterctx(filter);
