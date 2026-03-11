@@ -78,6 +78,7 @@ typedef struct SegmentContext {
     const AVOutputFormat *oformat;
     AVFormatContext *avf;
     char *format;              ///< format to use for output segment files
+    char *format_options_str;  ///< format options string for output segment files
     AVDictionary *format_options;
     char *list;            ///< filename for the segment list file
     int   list_flags;      ///< flags affecting list generation
@@ -702,6 +703,7 @@ static void seg_free(AVFormatContext *s)
         avformat_free_context(seg->avf);
         seg->avf = NULL;
     }
+    seg->avf = NULL;
     av_freep(&seg->times);
     av_freep(&seg->frames);
     av_freep(&seg->cur_entry.filename);
@@ -764,6 +766,14 @@ static int seg_init(AVFormatContext *s)
         if (seg->min_seg_duration > seg->time) {
             av_log(s, AV_LOG_ERROR, "min_seg_duration cannot be greater than segment_time\n");
             return AVERROR(EINVAL);
+        }
+    }
+
+    if (seg->format_options_str) {
+        ret = av_dict_parse_string(&seg->format_options, seg->format_options_str, "=", ":", 0);
+        if (ret < 0) {
+            av_log(s, AV_LOG_ERROR, "Could not parse format options list '%s'\n", seg->format_options_str);
+            return ret;
         }
     }
 
@@ -832,7 +842,7 @@ static int seg_init(AVFormatContext *s)
     ret = avformat_init_output(oc, &options);
     if (av_dict_count(options)) {
         av_log(s, AV_LOG_ERROR,
-               "Some of the provided format options are not recognized\n");
+               "Some of the provided format options in '%s' are not recognized\n", seg->format_options_str);
         av_dict_free(&options);
         return AVERROR(EINVAL);
     }
@@ -1095,7 +1105,7 @@ static int seg_check_bitstream(AVFormatContext *s, AVStream *st,
 static const AVOption options[] = {
     { "reference_stream",  "set reference stream", OFFSET(reference_stream_specifier), AV_OPT_TYPE_STRING, {.str = "auto"}, 0, 0, E },
     { "segment_format",    "set container format used for the segments", OFFSET(format),  AV_OPT_TYPE_STRING, {.str = NULL},  0, 0,       E },
-    { "segment_format_options", "set list of options for the container format used for the segments", OFFSET(format_options), AV_OPT_TYPE_DICT, {.str = NULL}, 0, 0, E },
+    { "segment_format_options", "set list of options for the container format used for the segments", OFFSET(format_options_str), AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, E },
     { "segment_list",      "set the segment list filename",              OFFSET(list),    AV_OPT_TYPE_STRING, {.str = NULL},  0, 0,       E },
     { "segment_header_filename", "write a single file containing the header", OFFSET(header_filename), AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, E },
 
