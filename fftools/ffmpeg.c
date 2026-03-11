@@ -669,6 +669,14 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     av_bprintf(&buf_script, "dup_frames=%"PRId64"\n", nb_frames_dup);
     av_bprintf(&buf_script, "drop_frames=%"PRId64"\n", nb_frames_drop);
 
+    if (throttleMs <= 0) {
+        av_bprintf(&buf, " throttle=off");
+        av_bprintf(&buf_script, "throttle=off\n");
+    } else {
+        av_bprintf(&buf, " throttle=%d", throttleMs);
+        av_bprintf(&buf_script, "throttle=%d\n", throttleMs);
+    }
+
     if (speed < 0) {
         av_bprintf(&buf, " speed=N/A");
         av_bprintf(&buf_script, "speed=N/A\n");
@@ -849,6 +857,37 @@ static int check_keyboard_interaction(int64_t cur_time)
                    "only %d given in string '%s'\n", n, buf);
         }
     }
+
+    if (key == 't' || key == 'T'){
+        char buf[4096];
+        int k;
+        int throttleInput = 0;
+        fprintf(stderr, "\nEnter throttle value: <int, ms wait per input cycle> (0 to disable)\n");
+        i = 0;
+        set_tty_echo(1);
+        while ((k = read_key()) != '\n' && k != '\r' && i < sizeof(buf)-1)
+            if (k > 0)
+                buf[i++] = k;
+        buf[i] = 0;
+        set_tty_echo(0);
+        fprintf(stderr, "\n");
+        if (k > 0 && sscanf(buf, "%d", &throttleInput) == 1) {
+
+            if (throttleInput > 0) {
+                av_log(NULL, AV_LOG_DEBUG, "Setting throttle value to %d ms\n", throttleInput);
+                fprintf(stderr, "Setting throttle value to %d ms\n", throttleInput);
+            } else {
+                av_log(NULL, AV_LOG_DEBUG, "Disable throttling\n");
+                fprintf(stderr, "Disable throttling\n");
+            }
+
+            throttleMs = throttleInput;
+
+        } else {
+            av_log(NULL, AV_LOG_ERROR, "Parse error, an integer value was expected\n");
+        }
+    }
+
     if (key == '?'){
         fprintf(stderr, "key    function\n"
                         "?      show this help\n"
@@ -857,6 +896,7 @@ static int check_keyboard_interaction(int64_t cur_time)
                         "c      Send command to first matching filter supporting it\n"
                         "C      Send/Queue command to all matching filters\n"
                         "h      dump packets/hex press to cycle through the 3 states\n"
+                        "t      set throttling\n"
                         "q      quit\n"
                         "s      Show QP histogram\n"
         );

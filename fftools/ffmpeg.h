@@ -761,6 +761,8 @@ extern int copy_unknown_streams;
 
 extern int recast_media;
 
+extern int throttleMs;
+
 extern FILE *vstats_file;
 
 void term_init(void);

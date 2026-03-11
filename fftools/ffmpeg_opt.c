@@ -83,6 +83,7 @@ char *print_graphs_format = NULL;
 int auto_conversion_filters = 1;
 int64_t stats_period = 500000;
 
+int throttleMs = 0;
 
 static int file_overwrite     = 0;
 static int no_file_overwrite  = 0;

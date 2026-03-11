@@ -925,6 +925,9 @@ static int input_thread(void *arg)
         if (d->readrate)
             readrate_sleep(d);
 
+        if (throttleMs > 0)
+            av_usleep(throttleMs * 1000);
+
         ret = demux_send(d, &dt, ds, dt.pkt_demux, send_flags);
         if (ret < 0)
             break;
