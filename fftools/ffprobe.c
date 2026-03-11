@@ -1868,7 +1868,7 @@ static int show_stream(AVTextFormatContext *tfc, AVFormatContext *fmt_ctx, int s
     else                                print_str_opt("nb_read_frames", "N/A");
     if (nb_streams_packets[stream_idx]) print_fmt    ("nb_read_packets", "%"PRIu64, nb_streams_packets[stream_idx]);
     else                                print_str_opt("nb_read_packets", "N/A");
-    if (do_show_data)
+    if (do_show_data && par->codec_type != AVMEDIA_TYPE_ATTACHMENT)
         avtext_print_data(tfc, "extradata", par->extradata,
                                           par->extradata_size);
 
