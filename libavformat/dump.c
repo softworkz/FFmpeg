@@ -150,7 +150,7 @@ static void dump_dictionary(void *ctx, const AVDictionary *m,
 
     av_log(ctx, log_level, "%s%s:\n", indent, name);
     while ((tag = av_dict_iterate(m, tag)))
-        if (strcmp("language", tag->key)) {
+        if (strcmp("language", tag->key) && tag->key[0] != '_') {
             const char *p = tag->value;
             av_log(ctx, log_level,
                    "%s  %-16s: ", indent, tag->key);
