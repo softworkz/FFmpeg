@@ -116,6 +116,7 @@ Program options:
   --disable-ffmpeg         disable ffmpeg build
   --disable-ffplay         disable ffplay build
   --disable-ffprobe        disable ffprobe build
+  --disable-ffdetect       disable ffdetect build
 
 Documentation options:
   --disable-doc            do not build documentation
@@ -2090,6 +2091,7 @@ LICENSE_LIST="
 
 PROGRAM_LIST="
     ffplay
+    ffdetect
     ffprobe
     ffmpeg
 "
@@ -4151,6 +4153,8 @@ ffplay_select="crop_filter transpose_filter hflip_filter vflip_filter rotate_fil
 ffplay_suggest="shell32 libplacebo vulkan"
 ffprobe_deps="avcodec avformat"
 ffprobe_suggest="shell32"
+ffdetect_deps="avutil avformat"
+ffdetect_suggest="shell32"
 
 # documentation
 podpages_deps="perl"
