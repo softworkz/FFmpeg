@@ -3153,6 +3153,9 @@ static int hls_init(AVFormatContext *s)
                 }
 
                 p = strrchr(vs->m3u8_name, '/');
+#if HAVE_DOS_PATHS
+                p = FFMAX(p, strrchr(vs->m3u8_name, '\\'));
+#endif
                 if (p) {
                     char tmp = *(++p);
                     *p = '\0';
