@@ -406,9 +406,12 @@ static int qsv_decode_init_context(AVCodecContext *avctx, QSVContext *q, mfxVide
     avctx->pix_fmt      = ff_qsv_map_fourcc(param->mfx.FrameInfo.FourCC);
 
     ret = MFXVideoDECODE_Init(q->session, param);
-    if (ret < 0)
-        return ff_qsv_print_error(avctx, ret,
-                                  "Error initializing the MFX video decoder");
+    if (ret < 0) {
+        if (param->mfx.FrameInfo.Width != 0 && param->mfx.FrameInfo.Height != 0)
+            return ff_qsv_print_error(avctx, ret,
+                                      "Error initializing the MFX video decoder");
+        return ret;
+    }
 
     q->frame_info = param->mfx.FrameInfo;
 
