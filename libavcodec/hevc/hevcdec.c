@@ -3078,29 +3078,41 @@ static int decode_slice_data(HEVCContext *s, const HEVCLayerContext *l,
 
 static int set_side_data(HEVCContext *s)
 {
-    const HEVCSPS *sps = s->cur_frame->pps->sps;
-    AVFrame *out = s->cur_frame->f;
+    return ff_hevc_set_side_data(s->avctx, &s->sei, s, s->cur_frame->f);
+}
+
+int ff_hevc_set_side_data(AVCodecContext *logctx, HEVCSEI *sei,
+                          HEVCContext *s, AVFrame *out)
+{
+    H2645VUI vui_default = { 0 };
+    const H2645VUI *vui = &vui_default;
+    unsigned bit_depth = 0, bit_depth_chroma = 0;
+    int seed = 0;
     int ret;
 
-    // Decrement the mastering display and content light level flag when IRAP
-    // frame has no_rasl_output_flag=1 so the side data persists for the entire
-    // coded video sequence.
-    if (IS_IRAP(s) && s->no_rasl_output_flag) {
-        if (s->sei.common.mastering_display.present > 0)
-            s->sei.common.mastering_display.present--;
+    if (s) {
+        const HEVCSPS *sps = s->cur_frame->pps->sps;
 
-        if (s->sei.common.content_light.present > 0)
-            s->sei.common.content_light.present--;
+        if (IS_IRAP(s) && s->no_rasl_output_flag) {
+            if (sei->common.mastering_display.present > 0)
+                sei->common.mastering_display.present--;
+
+            if (sei->common.content_light.present > 0)
+                sei->common.content_light.present--;
+        }
+
+        vui = &sps->vui.common;
+        bit_depth = sps->bit_depth;
+        bit_depth_chroma = sps->bit_depth_chroma;
+        seed = s->cur_frame->poc;
     }
 
-    ret = ff_h2645_sei_to_frame(out, &s->sei.common, AV_CODEC_ID_HEVC, s->avctx,
-                                &sps->vui.common,
-                                sps->bit_depth, sps->bit_depth_chroma,
-                                s->cur_frame->poc /* no poc_offset in HEVC */);
+    ret = ff_h2645_sei_to_frame(out, &sei->common, AV_CODEC_ID_HEVC, logctx,
+                                vui, bit_depth, bit_depth_chroma, seed);
     if (ret < 0)
         return ret;
 
-    if (s->sei.timecode.present) {
+    if (s && sei->timecode.present) {
         uint32_t *tc_sd;
         char tcbuf[AV_TIMECODE_STR_SIZE];
         AVFrameSideData *tcside;
@@ -3110,15 +3122,15 @@ static int set_side_data(HEVCContext *s)
             return ret;
 
         if (tcside) {
-            tc_sd = (uint32_t*)tcside->data;
-            tc_sd[0] = s->sei.timecode.num_clock_ts;
+            tc_sd = (uint32_t *)tcside->data;
+            tc_sd[0] = sei->timecode.num_clock_ts;
 
             for (int i = 0; i < tc_sd[0]; i++) {
-                int drop = s->sei.timecode.cnt_dropped_flag[i];
-                int   hh = s->sei.timecode.hours_value[i];
-                int   mm = s->sei.timecode.minutes_value[i];
-                int   ss = s->sei.timecode.seconds_value[i];
-                int   ff = s->sei.timecode.n_frames[i];
+                int drop = sei->timecode.cnt_dropped_flag[i];
+                int   hh = sei->timecode.hours_value[i];
+                int   mm = sei->timecode.minutes_value[i];
+                int   ss = sei->timecode.seconds_value[i];
+                int   ff = sei->timecode.n_frames[i];
 
                 tc_sd[i + 1] = av_timecode_get_smpte(s->avctx->framerate, drop, hh, mm, ss, ff);
                 av_timecode_make_smpte_tc_string2(tcbuf, s->avctx->framerate, tc_sd[i + 1], 0, 0);
@@ -3126,11 +3138,11 @@ static int set_side_data(HEVCContext *s)
             }
         }
 
-        s->sei.timecode.num_clock_ts = 0;
+        sei->timecode.num_clock_ts = 0;
     }
 
-    if (s->sei.common.dynamic_hdr_plus.info) {
-        AVBufferRef *info_ref = av_buffer_ref(s->sei.common.dynamic_hdr_plus.info);
+    if (s && sei->common.dynamic_hdr_plus.info) {
+        AVBufferRef *info_ref = av_buffer_ref(sei->common.dynamic_hdr_plus.info);
         if (!info_ref)
             return AVERROR(ENOMEM);
 
@@ -3139,7 +3151,7 @@ static int set_side_data(HEVCContext *s)
             return ret;
     }
 
-    if (s->rpu_buf) {
+    if (s && s->rpu_buf) {
         AVFrameSideData *rpu = av_frame_new_side_data_from_buf(out, AV_FRAME_DATA_DOVI_RPU_BUFFER, s->rpu_buf);
         if (!rpu)
             return AVERROR(ENOMEM);
@@ -3147,13 +3159,15 @@ static int set_side_data(HEVCContext *s)
         s->rpu_buf = NULL;
     }
 
-    if ((ret = ff_dovi_attach_side_data(&s->dovi_ctx, out)) < 0)
-        return ret;
+    if (s) {
+        if ((ret = ff_dovi_attach_side_data(&s->dovi_ctx, out)) < 0)
+            return ret;
+    }
 
-    if (s->sei.common.dynamic_hdr_vivid.info) {
+    if (s && sei->common.dynamic_hdr_vivid.info) {
         if (!av_frame_side_data_add(&out->side_data, &out->nb_side_data,
                                     AV_FRAME_DATA_DYNAMIC_HDR_VIVID,
-                                    &s->sei.common.dynamic_hdr_vivid.info,
+                                    &sei->common.dynamic_hdr_vivid.info,
                                     AV_FRAME_SIDE_DATA_FLAG_NEW_REF))
             return AVERROR(ENOMEM);
     }

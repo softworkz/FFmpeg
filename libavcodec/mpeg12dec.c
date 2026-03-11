@@ -62,45 +62,6 @@
 
 #define A53_MAX_CC_COUNT 2000
 
-enum Mpeg2ClosedCaptionsFormat {
-    CC_FORMAT_AUTO,
-    CC_FORMAT_A53_PART4,
-    CC_FORMAT_SCTE20,
-    CC_FORMAT_DVD,
-    CC_FORMAT_DISH
-};
-
-typedef struct Mpeg12SliceContext {
-    MPVContext c;
-    GetBitContext gb;
-
-    DECLARE_ALIGNED_32(int16_t, block)[12][64];
-} Mpeg12SliceContext;
-
-typedef struct Mpeg1Context {
-    Mpeg12SliceContext slice;
-    AVPanScan pan_scan;         /* some temporary storage for the panscan */
-    enum AVStereo3DType stereo3d_type;
-    int has_stereo3d;
-    AVBufferRef *a53_buf_ref;
-    enum Mpeg2ClosedCaptionsFormat cc_format;
-    uint8_t afd;
-    int has_afd;
-    int slice_count;
-    unsigned aspect_ratio_info;
-    int save_progressive_seq, save_chroma_format;
-    AVRational frame_rate_ext;  /* MPEG-2 specific framerate modificator */
-    unsigned frame_rate_index;
-    int sync;                   /* Did we reach a sync point like a GOP/SEQ/KEYFrame? */
-    int closed_gop;
-    int tmpgexs;
-    int first_slice;
-    int extradata_decoded;
-    int vbv_delay;
-    int64_t bit_rate;
-    int64_t timecode_frame_start;  /*< GOP timecode frame start number, in non drop frame format */
-} Mpeg1Context;
-
 /* as H.263, but only 17 codes */
 static int mpeg_decode_motion(Mpeg12SliceContext *const s, int fcode, int pred)
 {
@@ -1875,11 +1836,10 @@ static int vcr2_init_sequence(AVCodecContext *avctx)
     return 0;
 }
 
-static void mpeg_set_cc_format(AVCodecContext *avctx, enum Mpeg2ClosedCaptionsFormat format,
+static void mpeg_set_cc_format(AVCodecContext *avctx, Mpeg1Context *s1,
+                               enum Mpeg2ClosedCaptionsFormat format,
                                const char *label)
 {
-    Mpeg1Context *s1 = avctx->priv_data;
-
     av_assert2(format != CC_FORMAT_AUTO);
 
     if (!s1->cc_format) {
@@ -1895,10 +1855,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 }
 
-static int mpeg_decode_a53_cc(AVCodecContext *avctx,
+static int mpeg_decode_a53_cc(AVCodecContext *avctx, Mpeg1Context *s1,
                               const uint8_t *p, int buf_size)
 {
-    Mpeg1Context *s1 = avctx->priv_data;
 
     if ((!s1->cc_format || s1->cc_format == CC_FORMAT_A53_PART4) &&
         buf_size >= 6 &&
@@ -1919,7 +1878,7 @@ static int mpeg_decode_a53_cc(AVCodecContext *avctx,
             if (ret >= 0)
                 memcpy(s1->a53_buf_ref->data + old_size, p + 7, cc_count * UINT64_C(3));
 
-            mpeg_set_cc_format(avctx, CC_FORMAT_A53_PART4, "A/53 Part 4");
+            mpeg_set_cc_format(avctx, s1, CC_FORMAT_A53_PART4, "A/53 Part 4");
         }
         return 1;
     } else if ((!s1->cc_format || s1->cc_format == CC_FORMAT_SCTE20) &&
@@ -1968,7 +1927,7 @@ static int mpeg_decode_a53_cc(AVCodecContext *avctx,
                 }
             }
 
-            mpeg_set_cc_format(avctx, CC_FORMAT_SCTE20, "SCTE-20");
+            mpeg_set_cc_format(avctx, s1, CC_FORMAT_SCTE20, "SCTE-20");
         }
         return 1;
     } else if ((!s1->cc_format || s1->cc_format == CC_FORMAT_DVD) &&
@@ -2030,7 +1989,7 @@ static int mpeg_decode_a53_cc(AVCodecContext *avctx,
                 }
             }
 
-            mpeg_set_cc_format(avctx, CC_FORMAT_DVD, "DVD");
+            mpeg_set_cc_format(avctx, s1, CC_FORMAT_DVD, "DVD");
         }
         return 1;
     } else if ((!s1->cc_format || s1->cc_format == CC_FORMAT_DISH) &&
@@ -2093,18 +2052,17 @@ static int mpeg_decode_a53_cc(AVCodecContext *avctx,
                 }
             }
 
-            mpeg_set_cc_format(avctx, CC_FORMAT_DISH, "Dish Network");
+            mpeg_set_cc_format(avctx, s1, CC_FORMAT_DISH, "Dish Network");
         }
         return 1;
     }
     return 0;
 }
 
-static void mpeg_decode_user_data(AVCodecContext *avctx,
-                                  const uint8_t *p, int buf_size)
+void ff_mpeg_decode_user_data(AVCodecContext *avctx, Mpeg1Context *s1,
+                              const uint8_t *p, int buf_size)
 {
     const uint8_t *buf_end = p + buf_size;
-    Mpeg1Context *s1 = avctx->priv_data;
 
 #if 0
     int i;
@@ -2164,7 +2122,7 @@ static void mpeg_decode_user_data(AVCodecContext *avctx,
                 break;
             }
         }
-    } else if (mpeg_decode_a53_cc(avctx, p, buf_size)) {
+    } else if (mpeg_decode_a53_cc(avctx, s1, p, buf_size)) {
         return;
     }
 }
@@ -2373,7 +2331,7 @@ static int decode_chunks(AVCodecContext *avctx, AVFrame *picture,
             break;
         }
         case USER_START_CODE:
-            mpeg_decode_user_data(avctx, buf_ptr, input_size);
+            ff_mpeg_decode_user_data(avctx, s, buf_ptr, input_size);
             break;
         case GOP_START_CODE:
             if (last_code == 0) {

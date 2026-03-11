@@ -23,6 +23,7 @@
 
 #include "config_components.h"
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
@@ -48,8 +49,16 @@
 #include "codec_internal.h"
 #include "internal.h"
 #include "decode.h"
+#include "get_bits.h"
 #include "hwconfig.h"
+#include "h264dec.h"
+#include "h264_sei.h"
+#include "hevc/hevcdec.h"
+#include "hevc/ps.h"
+#include "hevc/sei.h"
+#include "mpeg12dec.h"
 #include "qsv.h"
+#include "sei.h"
 #include "qsv_internal.h"
 #include "libavutil/refstruct.h"
 
@@ -70,6 +79,8 @@ static const AVRational mfx_tb = { 1, 90000 };
     av_rescale_q(mfx_pts, mfx_tb, pts_tb) : mfx_pts)
 
 #define MFX_IMPL_VIA_MASK(impl) (0x0f00 & (impl))
+
+#define PAYLOAD_BUFFER_SIZE 65535
 
 typedef struct QSVAsyncFrame {
     mfxSyncPoint *sync;
@@ -113,6 +124,9 @@ typedef struct QSVContext {
 
     mfxExtBuffer **ext_buffers;
     int         nb_ext_buffers;
+
+    mfxU8 payload_buffer[PAYLOAD_BUFFER_SIZE];
+    Mpeg1Context mpeg_ctx;
 } QSVContext;
 
 static const AVCodecHWConfigInternal *const qsv_hw_configs[] = {
@@ -787,6 +801,198 @@ static int qsv_export_hdr_side_data_av1(AVCodecContext *avctx, mfxExtMasteringDi
 
 #endif
 
+static int find_start_offset(mfxU8 data[4])
+{
+    if (data[0] == 0 && data[1] == 0 && data[2] == 1)
+        return 3;
+
+    if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 1)
+        return 4;
+
+    return 0;
+}
+
+static int parse_sei_h264(AVCodecContext *avctx, QSVContext *q, AVFrame *out)
+{
+    H264SEIContext sei = { 0 };
+    GetBitContext gb = { 0 };
+    mfxPayload payload = { 0, .Data = &q->payload_buffer[0], .BufSize = sizeof(q->payload_buffer) };
+    mfxU64 ts;
+    int ret;
+
+    while (1) {
+        int start;
+        memset(payload.Data, 0, payload.BufSize);
+
+        ret = MFXVideoDECODE_GetPayload(q->session, &ts, &payload);
+        if (ret != MFX_ERR_NONE) {
+            av_log(avctx, AV_LOG_WARNING, "error getting SEI payload: %d \n", ret);
+            return ret;
+        }
+
+        if (payload.NumBit == 0 || payload.NumBit >= payload.BufSize * 8)
+            break;
+
+        start = find_start_offset(payload.Data);
+
+        switch (payload.Type) {
+        case SEI_TYPE_BUFFERING_PERIOD:
+        case SEI_TYPE_PIC_TIMING:
+            continue;
+        }
+
+        if (init_get_bits(&gb, &payload.Data[start], payload.NumBit - start * 8) < 0)
+            av_log(avctx, AV_LOG_ERROR, "Error initializing bitstream reader");
+        else
+            ret = ff_h264_sei_decode(&sei, &gb, NULL, avctx);
+
+        if (ret < 0)
+            av_log(avctx, AV_LOG_WARNING, "Error parsing SEI type: %d  Numbits %d error: %d\n", payload.Type, payload.NumBit, ret);
+        else
+            av_log(avctx, AV_LOG_DEBUG, "mfxPayload Type: %d  Numbits %d\n", payload.Type, payload.NumBit);
+    }
+
+    if (out)
+        return ff_h264_export_frame_props(avctx, &sei, NULL, out);
+
+    return 0;
+}
+
+static int parse_sei_hevc(AVCodecContext *avctx, QSVContext *q, QSVFrame *out)
+{
+    HEVCSEI sei = { 0 };
+    HEVCParamSets ps = { 0 };
+    GetBitContext gb = { 0 };
+    mfxPayload payload = { 0, .Data = &q->payload_buffer[0], .BufSize = sizeof(q->payload_buffer) };
+    mfxFrameSurface1 *surface = &out->surface;
+    mfxU64 ts;
+    int ret, has_logged = 0;
+
+    while (1) {
+        int start;
+        memset(payload.Data, 0, payload.BufSize);
+
+        ret = MFXVideoDECODE_GetPayload(q->session, &ts, &payload);
+        if (ret != MFX_ERR_NONE) {
+            av_log(avctx, AV_LOG_WARNING, "error getting SEI payload: %d \n", ret);
+            return 0;
+        }
+
+        if (payload.NumBit == 0 || payload.NumBit >= payload.BufSize * 8)
+            break;
+
+        if (!has_logged) {
+            has_logged = 1;
+            av_log(avctx, AV_LOG_VERBOSE, "-----------------------------------------\n");
+            av_log(avctx, AV_LOG_VERBOSE, "Start reading SEI - payload timestamp: %"PRIu64" - surface timestamp: %"PRIu64"\n", (uint64_t)ts, (uint64_t)surface->Data.TimeStamp);
+        }
+
+        if (ts != surface->Data.TimeStamp)
+            av_log(avctx, AV_LOG_WARNING, "GetPayload timestamp (%"PRIu64") does not match surface timestamp: (%"PRIu64")\n", (uint64_t)ts, (uint64_t)surface->Data.TimeStamp);
+
+        start = find_start_offset(payload.Data);
+
+        av_log(avctx, AV_LOG_VERBOSE, "parsing SEI type: %3d  Numbits %3d  Start: %d\n", payload.Type, payload.NumBit, start);
+
+        switch (payload.Type) {
+        case SEI_TYPE_BUFFERING_PERIOD:
+        case SEI_TYPE_PIC_TIMING:
+            continue;
+        case SEI_TYPE_MASTERING_DISPLAY_COLOUR_VOLUME:
+            payload.NumBit -= 8;
+            break;
+        case SEI_TYPE_CONTENT_LIGHT_LEVEL_INFO:
+            payload.NumBit = 48;
+            break;
+        case SEI_TYPE_USER_DATA_REGISTERED_ITU_T_T35:
+            if (payload.NumBit == 552)
+                payload.NumBit = 528;
+            break;
+        }
+
+        if (init_get_bits(&gb, &payload.Data[start], payload.NumBit - start * 8) < 0)
+            av_log(avctx, AV_LOG_ERROR, "Error initializing bitstream reader");
+        else
+            ret = ff_hevc_decode_nal_sei(&gb, avctx, &sei, &ps, HEVC_NAL_SEI_PREFIX);
+
+        if (ret < 0)
+            av_log(avctx, AV_LOG_WARNING, "error parsing SEI type: %d  Numbits %d error: %d\n", payload.Type, payload.NumBit, ret);
+        else
+            av_log(avctx, AV_LOG_DEBUG, "mfxPayload Type: %d  Numbits %d\n", payload.Type, payload.NumBit);
+    }
+
+    if (has_logged)
+        av_log(avctx, AV_LOG_VERBOSE, "End reading SEI\n");
+
+    if (out && out->frame)
+        return ff_hevc_set_side_data(avctx, &sei, NULL, out->frame);
+
+    return 0;
+}
+
+static int parse_sei_mpeg12(AVCodecContext *avctx, QSVContext *q, AVFrame *out)
+{
+    Mpeg1Context *mpeg_ctx = &q->mpeg_ctx;
+    mfxPayload payload = { 0, .Data = &q->payload_buffer[0], .BufSize = sizeof(q->payload_buffer) };
+    mfxU64 ts;
+    int ret;
+
+    while (1) {
+        int start;
+
+        memset(payload.Data, 0, payload.BufSize);
+        ret = MFXVideoDECODE_GetPayload(q->session, &ts, &payload);
+        if (ret != MFX_ERR_NONE) {
+            av_log(avctx, AV_LOG_WARNING, "error getting SEI payload: %d \n", ret);
+            return ret;
+        }
+
+        if (payload.NumBit == 0 || payload.NumBit >= payload.BufSize * 8)
+            break;
+
+        start = find_start_offset(payload.Data);
+
+        start++;
+
+        ff_mpeg_decode_user_data(avctx, mpeg_ctx, &payload.Data[start], (int)((payload.NumBit + 7) / 8) - start);
+
+        if (ret < 0)
+            av_log(avctx, AV_LOG_WARNING, "error parsing SEI type: %d  Numbits %d error: %d\n", payload.Type, payload.NumBit, ret);
+        else
+            av_log(avctx, AV_LOG_DEBUG, "mfxPayload Type: %d  Numbits %d start %d -> %.s\n", payload.Type, payload.NumBit, start, (char *)(&payload.Data[start]));
+    }
+
+    if (!out)
+        return 0;
+
+    if (mpeg_ctx->a53_buf_ref) {
+        AVFrameSideData *sd = av_frame_new_side_data_from_buf(out, AV_FRAME_DATA_A53_CC, mpeg_ctx->a53_buf_ref);
+        if (!sd)
+            av_buffer_unref(&mpeg_ctx->a53_buf_ref);
+        mpeg_ctx->a53_buf_ref = NULL;
+    }
+
+    if (mpeg_ctx->has_stereo3d) {
+        AVStereo3D *stereo = av_stereo3d_create_side_data(out);
+        if (!stereo)
+            return AVERROR(ENOMEM);
+
+        stereo->type = mpeg_ctx->stereo3d_type;
+        mpeg_ctx->has_stereo3d = 0;
+    }
+
+    if (mpeg_ctx->has_afd) {
+        AVFrameSideData *sd = av_frame_new_side_data(out, AV_FRAME_DATA_AFD, 1);
+        if (!sd)
+            return AVERROR(ENOMEM);
+
+        *sd->data = mpeg_ctx->afd;
+        mpeg_ctx->has_afd = 0;
+    }
+
+    return 0;
+}
+
 static int qsv_decode(AVCodecContext *avctx, QSVContext *q,
                       AVFrame *frame, int *got_frame,
                       const AVPacket *avpkt)
@@ -823,6 +1029,8 @@ static int qsv_decode(AVCodecContext *avctx, QSVContext *q,
                                               insurf, &outsurf, sync);
         if (ret == MFX_WRN_DEVICE_BUSY)
             av_usleep(500);
+        else if (avctx->codec_id == AV_CODEC_ID_MPEG1VIDEO || avctx->codec_id == AV_CODEC_ID_MPEG2VIDEO)
+            parse_sei_mpeg12(avctx, q, NULL);
 
     } while (ret == MFX_WRN_DEVICE_BUSY || ret == MFX_ERR_MORE_SURFACE);
 
@@ -865,6 +1073,24 @@ static int qsv_decode(AVCodecContext *avctx, QSVContext *q,
             av_freep(&sync);
             return AVERROR_BUG;
         }
+
+        switch (avctx->codec_id) {
+        case AV_CODEC_ID_MPEG1VIDEO:
+        case AV_CODEC_ID_MPEG2VIDEO:
+            ret = parse_sei_mpeg12(avctx, q, out_frame->frame);
+            break;
+        case AV_CODEC_ID_H264:
+            ret = parse_sei_h264(avctx, q, out_frame->frame);
+            break;
+        case AV_CODEC_ID_HEVC:
+            ret = parse_sei_hevc(avctx, q, out_frame);
+            break;
+        default:
+            ret = 0;
+        }
+
+        if (ret < 0)
+            av_log(avctx, AV_LOG_ERROR, "Error parsing SEI data\n");
 
         out_frame->queued += 1;
 
