@@ -124,6 +124,7 @@ typedef struct SegmentContext {
     int segment_limit;       ///< max number of segments to create
     int segment_write_temp; ///< write segments as temp files and rename on completion
     int use_rename;
+    int64_t min_frame_time;    ///< minimum timestamp time for frames, expressed in microseconds
     char temp_list_filename[1024];
 
     SegmentListEntry cur_entry;
@@ -908,6 +909,11 @@ static int seg_write_packet(AVFormatContext *s, AVPacket *pkt)
     }
 
 calc_times:
+    ////if (pkt->stream_index == seg->reference_stream_index &&
+    ////    (pkt->flags & AV_PKT_FLAG_KEY || seg->break_non_keyframes) &&
+    ////    pkt->pts != AV_NOPTS_VALUE && seg->min_frame_time == -INT64_MAX)
+    ////    seg->min_frame_time = av_rescale_q(pkt->pts, st->time_base, AV_TIME_BASE_Q);
+
     if (seg->times) {
         end_pts = seg->segment_count < seg->nb_times ?
             seg->times[seg->segment_count] : INT64_MAX;
@@ -925,7 +931,7 @@ calc_times:
                 seg->cut_pending = 1;
             seg->last_val = wrapped_val;
         } else {
-            end_pts = seg->time * (seg->segment_count + 1);
+            end_pts = seg->time * (seg->segment_count + 1) + seg->min_frame_time;
         }
     }
 
@@ -1116,6 +1122,7 @@ static const AVOption options[] = {
     { "write_empty_segments", "allow writing empty 'filler' segments", OFFSET(write_empty), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, E },
     { "segment_write_temp", "write segments as temp files and rename on completion", OFFSET(segment_write_temp), AV_OPT_TYPE_BOOL,   {.i64 = 0}, 0, 1, E }, 
     { "segment_limit", "stop output once the specified number of segments has been written", OFFSET(segment_limit), AV_OPT_TYPE_INT, {.i64 = 0}, 0, INT_MAX, E },
+    { "min_frame_time", "drop any frames earlier", OFFSET(min_frame_time), AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, INT64_MAX, E },
     { NULL },
 };
 
