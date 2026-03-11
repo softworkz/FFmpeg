@@ -717,10 +717,10 @@ static int seg_init(AVFormatContext *s)
         seg->individual_header_trailer = 0;
     }
 
-    if (seg->initial_offset > 0) {
-        av_log(s, AV_LOG_WARNING, "NOTE: the option initial_offset is deprecated,"
-               "you can use output_ts_offset instead of it\n");
-    }
+    //if (seg->initial_offset > 0) {
+    //    av_log(s, AV_LOG_WARNING, "NOTE: the option initial_offset is deprecated,"
+    //           "you can use output_ts_offset instead of it\n");
+    //}
 
     if ((seg->time != 2000000) + !!seg->times_str + !!seg->frames_str > 1) {
         av_log(s, AV_LOG_ERROR,
