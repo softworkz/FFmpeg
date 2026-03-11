@@ -629,6 +629,8 @@ int of_stream_init(OutputFile *of, OutputStream *ost,
                    "Error initializing the output stream codec parameters.\n");
             return ret;
         }
+
+        ost->st->sample_aspect_ratio = ms->par_in->sample_aspect_ratio;
     }
 
     /* initialize bitstream filters for the output stream
