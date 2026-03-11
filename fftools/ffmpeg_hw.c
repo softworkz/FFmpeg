@@ -186,8 +186,8 @@ int hw_device_init_from_string(const char *arg, HWDevice **dev_out)
             goto invalid;
         }
 
-        err = av_hwdevice_ctx_create_derived(&device_ref, type,
-                                             src->device_ref, 0);
+        err = av_hwdevice_ctx_get_or_create_derived(&device_ref, type,
+                                                    src->device_ref, 0);
         if (err < 0)
             goto fail;
     } else if (*p == ',') {
