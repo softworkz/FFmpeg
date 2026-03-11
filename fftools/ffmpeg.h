@@ -171,6 +171,9 @@ typedef struct OptionsContext {
     int input_sync_ref;
     int find_stream_info;
 
+    int64_t skip_interval;
+    char   *skip_list_str;
+
     SpecifierOptList ts_scale;
     SpecifierOptList dump_attachment;
     SpecifierOptList hwaccels;
@@ -504,6 +507,8 @@ typedef struct InputFile {
     int64_t          ts_offset;
     /* user-specified start time in AV_TIME_BASE or AV_NOPTS_VALUE */
     int64_t          start_time;
+
+    int              skip_active;
 
     /* streams that ffmpeg is aware of;
      * there may be extra streams in ctx that are not mapped to an InputStream

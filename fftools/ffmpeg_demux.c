@@ -137,6 +137,16 @@ typedef struct Demuxer {
     double                readrate_initial_burst;
     float                 readrate_catchup;
 
+    int64_t               skip_interval;
+    int64_t              *skip_times;
+    int                   nb_skip_times;
+    int                   skip_index;
+    int64_t               skip_position;
+    int64_t               skip_last_keyframe_ts;
+    int                   skip_active;
+    int                   skip_video_stream;
+    int                   skip_send_extra_packets;
+
     Scheduler            *sch;
 
     AVPacket             *pkt_heartbeat;
@@ -714,6 +724,55 @@ static int demux_thread_init(DemuxThreadContext *dt)
     return 0;
 }
 
+static int skip_do_seek(Demuxer *d, int64_t target_ts)
+{
+    InputFile       *f  = &d->f;
+    AVFormatContext *ic = f->ctx;
+    int64_t seek_ts = target_ts;
+    int ret;
+
+    if (ic->start_time != AV_NOPTS_VALUE)
+        seek_ts += ic->start_time;
+
+    ret = avformat_seek_file(ic, -1, seek_ts, seek_ts, INT64_MAX, 0);
+
+    if (ret < 0) {
+        av_log(d, AV_LOG_DEBUG, "Skip-seek error to %s: %s\n",
+               av_ts2timestr(target_ts, &AV_TIME_BASE_Q), av_err2str(ret));
+    } else {
+        av_log(d, AV_LOG_INFO, "Skip-Option - Seek to: %s\n",
+               av_ts2timestr(target_ts, &AV_TIME_BASE_Q));
+    }
+
+    return ret;
+}
+
+static int skip_advance(Demuxer *d)
+{
+    if (d->skip_interval != AV_NOPTS_VALUE) {
+        d->skip_position += d->skip_interval;
+        skip_do_seek(d, d->skip_position);
+        return 1;
+    }
+
+    if (d->nb_skip_times > 0) {
+        // skip entries that would land on the same keyframe we just sent
+        while (d->skip_index < d->nb_skip_times &&
+               d->skip_times[d->skip_index] <= d->skip_last_keyframe_ts)
+            d->skip_index++;
+
+        if (d->skip_index < d->nb_skip_times) {
+            d->skip_position = d->skip_times[d->skip_index];
+            d->skip_index++;
+            skip_do_seek(d, d->skip_position);
+            return 1;
+        }
+        return 0;
+    }
+
+    return 0;
+}
+
 static int input_thread(void *arg)
 {
     Demuxer   *d = arg;
@@ -722,6 +781,7 @@ static int input_thread(void *arg)
     DemuxThreadContext dt;
 
     int ret = 0;
+    int skip_keyframe_sent = 0;
 
     ret = demux_thread_init(&dt);
     if (ret < 0)
@@ -733,6 +793,9 @@ static int input_thread(void *arg)
 
     d->read_started    = 1;
     d->wallclock_start = av_gettime_relative();
+
+    if (d->skip_active)
+        skip_do_seek(d, d->skip_position);
 
     while (1) {
         DemuxStream *ds;
@@ -800,6 +863,61 @@ static int input_thread(void *arg)
             }
         }
 
+        if (d->skip_active) {
+            if (dt.pkt_demux->stream_index != d->skip_video_stream) {
+                av_packet_unref(dt.pkt_demux);
+                continue;
+            }
+
+            if (!skip_keyframe_sent) {
+                if (!(dt.pkt_demux->flags & AV_PKT_FLAG_KEY)) {
+                    av_packet_unref(dt.pkt_demux);
+                    continue;
+                }
+
+                // skip keyframes at the same position as the last one we sent
+                if (d->skip_last_keyframe_ts != AV_NOPTS_VALUE &&
+                    dt.pkt_demux->pts != AV_NOPTS_VALUE) {
+                    AVRational tb = f->ctx->streams[dt.pkt_demux->stream_index]->time_base;
+                    int64_t kf_ts = av_rescale_q(dt.pkt_demux->pts, tb, AV_TIME_BASE_Q);
+                    if (f->ctx->start_time != AV_NOPTS_VALUE)
+                        kf_ts -= f->ctx->start_time;
+                    if (kf_ts <= d->skip_last_keyframe_ts) {
+                        av_packet_unref(dt.pkt_demux);
+                        continue;
+                    }
+                }
+
+                av_log(d, AV_LOG_INFO,
+                       "Skip-Option - Keyframe at %s (target: %s)\n",
+                       av_ts2timestr(dt.pkt_demux->pts,
+                                     &f->ctx->streams[dt.pkt_demux->stream_index]->time_base),
+                       av_ts2timestr(d->skip_position, &AV_TIME_BASE_Q));
+
+                // track the actual keyframe position for dedup in skip_advance();
+                // subtract start_time to keep in the same 0-based reference as skip targets
+                if (dt.pkt_demux->pts != AV_NOPTS_VALUE) {
+                    AVRational tb            = f->ctx->streams[dt.pkt_demux->stream_index]->time_base;
+                    int64_t kf_abs           = av_rescale_q(dt.pkt_demux->pts, tb, AV_TIME_BASE_Q);
+                    d->skip_last_keyframe_ts = kf_abs;
+                    if (f->ctx->start_time != AV_NOPTS_VALUE)
+                        d->skip_last_keyframe_ts -= f->ctx->start_time;
+                }
+
+                skip_keyframe_sent = 1;
+            }
+        }
+
+        if (d->skip_active && skip_keyframe_sent > 0 && !(dt.pkt_demux->flags & AV_PKT_FLAG_KEY)) {
+            dt.pkt_demux->flags |= AV_PKT_FLAG_DISCARD;
+        }
+
+        if (d->skip_active && skip_keyframe_sent > 0)
+            skip_keyframe_sent++;
+
+        ////av_pkt_dump_log2(NULL, AV_LOG_INFO, dt.pkt_demux, do_hex_dump,
+        ////                 f->ctx->streams[dt.pkt_demux->stream_index]);
+
         ret = input_packet_process(d, dt.pkt_demux, &send_flags);
         if (ret < 0)
             break;
@@ -810,6 +928,34 @@ static int input_thread(void *arg)
         ret = demux_send(d, &dt, ds, dt.pkt_demux, send_flags);
         if (ret < 0)
             break;
+
+        if (d->skip_active && skip_keyframe_sent > 1 + d->skip_send_extra_packets) {
+            skip_keyframe_sent = 0;
+
+            if (!skip_advance(d)) {
+                av_log(d, AV_LOG_INFO,
+                       "Skip-Option - All positions extracted, finishing\n");
+                ret = AVERROR_EOF;
+                break;
+            }
+
+            // flush downstream pipeline (same pattern as -loop)
+            dt.pkt_demux->stream_index = -1;
+            ret = sch_demux_send(d->sch, f->index, dt.pkt_demux, 0);
+            if (ret < 0)
+                break;
+
+            // reset demux-side timestamp tracking so the discontinuity
+            // detector does not "correct" the post-seek timestamps
+            d->ts_offset_discont = 0;
+            d->last_ts           = AV_NOPTS_VALUE;
+            for (int i = 0; i < f->nb_streams; i++) {
+                DemuxStream *ds1 = ds_from_ist(f->streams[i]);
+                ds1->next_dts  = AV_NOPTS_VALUE;
+                ds1->dts       = AV_NOPTS_VALUE;
+                ds1->first_dts = AV_NOPTS_VALUE;
+            }
+        }
     }
 
     // EOF/EXIT is normal termination
@@ -893,6 +1039,8 @@ void ifile_close(InputFile **pf)
 
     if (!f)
         return;
+
+    av_freep(&d->skip_times);
 
     if (d->read_started)
         demux_final_stats(d);
@@ -1653,6 +1801,62 @@ static Demuxer *demux_alloc(void)
     return d;
 }
 
+static int parse_times(void *log_ctx, int64_t **times, int *nb_times,
+                       const char *times_str)
+{
+    char *p, *times_str1, *saveptr = NULL;
+    int i, ret = 0;
+
+    times_str1 = av_strdup(times_str);
+    if (!times_str1)
+        return AVERROR(ENOMEM);
+
+    *nb_times = 1;
+    for (p = times_str1; *p; p++)
+        if (*p == ',')
+            (*nb_times)++;
+
+    *times = av_malloc_array(*nb_times, sizeof(**times));
+    if (!*times) {
+        av_log(log_ctx, AV_LOG_ERROR, "Could not allocate skip times array\n");
+        ret = AVERROR(ENOMEM);
+        goto end;
+    }
+
+    p = times_str1;
+    for (i = 0; i < *nb_times; i++) {
+        int64_t t;
+        char *tstr = av_strtok(p, ",", &saveptr);
+        p = NULL;
+
+        if (!tstr || !tstr[0]) {
+            av_log(log_ctx, AV_LOG_ERROR,
+                   "Empty time in skip_list: %s\n", times_str);
+            ret = AVERROR(EINVAL);
+            goto end;
+        }
+
+        ret = av_parse_time(&t, tstr, 1);
+        if (ret < 0) {
+            av_log(log_ctx, AV_LOG_ERROR,
+                   "Invalid time '%s' in skip_list: %s\n", tstr, times_str);
+            goto end;
+        }
+        (*times)[i] = t;
+
+        if (i && (*times)[i - 1] > (*times)[i]) {
+            av_log(log_ctx, AV_LOG_ERROR,
+                   "skip_list times must be monotonically increasing\n");
+            ret = AVERROR(EINVAL);
+            goto end;
+        }
+    }
+
+end:
+    av_free(times_str1);
+    return ret;
+}
+
 int ifile_open(const OptionsContext *o, const char *filename, Scheduler *sch)
 {
     Demuxer   *d;
@@ -1900,6 +2104,55 @@ int ifile_open(const OptionsContext *o, const char *filename, Scheduler *sch)
     f->input_ts_offset = o->input_ts_offset;
     f->ts_offset  = o->input_ts_offset - (copy_ts ? (start_at_zero && ic->start_time != AV_NOPTS_VALUE ? ic->start_time : 0) : timestamp);
     d->accurate_seek   = o->accurate_seek;
+
+    d->skip_interval           = AV_NOPTS_VALUE;
+    d->skip_active             = 0;
+    d->skip_video_stream       = -1;
+    d->skip_send_extra_packets = 0;
+    d->skip_last_keyframe_ts = AV_NOPTS_VALUE;
+
+    if (o->skip_interval != AV_NOPTS_VALUE && o->skip_list_str) {
+        av_log(d, AV_LOG_ERROR,
+               "Options -skip_interval and -skip_list are mutually exclusive\n");
+        return AVERROR(EINVAL);
+    }
+
+    d->skip_interval = o->skip_interval;
+
+    if (o->skip_list_str) {
+        ret = parse_times(d, &d->skip_times, &d->nb_skip_times, o->skip_list_str);
+        if (ret < 0)
+            return ret;
+    }
+
+    if (d->skip_interval != AV_NOPTS_VALUE || d->nb_skip_times > 0) {
+        d->skip_active = 1;
+        f->skip_active = 1;
+
+        if (start_time == AV_NOPTS_VALUE) {
+            start_time = 0;
+            f->start_time = 0;
+        }
+
+        for (int i = 0; i < ic->nb_streams; i++) {
+            if (ic->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                d->skip_video_stream = i;
+                if (ic->streams[i]->codecpar->field_order > AV_FIELD_PROGRESSIVE && !strcmp(ic->iformat->name, "mpegts"))
+                    d->skip_send_extra_packets = 1;
+                break;
+            }
+        }
+
+        if (d->skip_video_stream < 0) {
+            av_log(d, AV_LOG_ERROR,
+                   "skip_interval/skip_list requires a video stream\n");
+            return AVERROR(EINVAL);
+        }
+
+        d->skip_position = (start_time != AV_NOPTS_VALUE) ? start_time : 0;
+        d->skip_index    = 0;
+    }
+
     d->loop = o->loop;
     d->nb_streams_warn = ic->nb_streams;
 

@@ -143,6 +143,7 @@ static void init_options(OptionsContext *o)
     o->mux_max_delay  = 0.7;
     o->start_time     = AV_NOPTS_VALUE;
     o->start_time_eof = AV_NOPTS_VALUE;
+    o->skip_interval  = AV_NOPTS_VALUE;
     o->recording_time = INT64_MAX;
     o->limit_filesize = INT64_MAX;
     o->chapters_input_file = INT_MAX;
@@ -1582,6 +1583,12 @@ const OptionDef options[] = {
     { "sseof",                  OPT_TYPE_TIME, OPT_OFFSET | OPT_INPUT | OPT_EXPERT,
         { .off = OFFSET(start_time_eof) },
         "set the start time offset relative to EOF", "time_off" },
+    { "skip_interval",          OPT_TYPE_TIME, OPT_OFFSET | OPT_EXPERT | OPT_INPUT,
+        { .off = OFFSET(skip_interval) },
+        "interval for high-speed keyframe image extraction", "" },
+    { "skip_list",              OPT_TYPE_STRING, OPT_OFFSET | OPT_EXPERT | OPT_INPUT,
+        { .off = OFFSET(skip_list_str) },
+        "comma-separated timestamps for keyframe image extraction", "" },
     { "seek_timestamp",         OPT_TYPE_INT, OPT_OFFSET | OPT_INPUT | OPT_EXPERT,
         { .off = OFFSET(seek_timestamp) },
         "enable/disable seeking by timestamp with -ss" },
