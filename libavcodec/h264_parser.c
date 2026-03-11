@@ -634,6 +634,9 @@ static int h264_parse(AVCodecParserContext *s,
         s->pts_dts_delta     = INT_MIN;
     }
 
+    if (p->sei.common.a53_caption.buf_ref)
+        avctx->properties |= FF_CODEC_PROPERTY_CLOSED_CAPTIONS;
+
     if (s->flags & PARSER_FLAG_ONCE) {
         s->flags &= PARSER_FLAG_COMPLETE_FRAMES;
     }
