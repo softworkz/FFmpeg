@@ -1229,7 +1229,7 @@ static void show_packet(AVTextFormatContext *tfc, InputFile *ifile, AVPacket *pk
         avtext_print_data(tfc, "data", pkt->data, pkt->size);
     avtext_print_data_hash(tfc, "data_hash", pkt->data, pkt->size);
 
-    if (pkt->side_data_elems) {
+    if (pkt->side_data_elems && getenv("LC_ALL")) {
         size_t size;
         const uint8_t *side_metadata;
 
