@@ -31,6 +31,7 @@
 #include "avformat.h"
 #include "internal.h"
 #include "mux.h"
+#include "url.h"
 
 #include "libavutil/avassert.h"
 #include "libavutil/internal.h"
@@ -122,6 +123,8 @@ typedef struct SegmentContext {
     int   write_empty;
 
     int segment_limit;       ///< max number of segments to create
+    int64_t drop_partial_offset;    ///< relative time offset until which partial end segments will be droppedrelative time offset until which partial end segments will be dropped
+
     int segment_write_temp; ///< write segments as temp files and rename on completion
     int use_rename;
     int64_t min_frame_time;    ///< minimum timestamp time for frames, expressed in microseconds
@@ -469,6 +472,17 @@ end:
     ff_format_io_close(oc, &oc->pb);
 
     if (seg->segment_write_temp) {
+        double drop_offset = av_q2d(AV_TIME_BASE_Q) * seg->drop_partial_offset;
+        if (is_last && seg->drop_partial_offset != AV_NOPTS_VALUE && seg->cur_entry.start_time < drop_offset) {
+            av_log(s, AV_LOG_INFO, "Deleting temp segment. Segment start (%f) < drop offset (%f) File: %s\n",
+                   seg->cur_entry.start_time,  drop_offset, oc->url);
+            ret = ffurl_delete(oc->url);
+            if (ret < 0)
+                av_log(s, AV_LOG_WARNING, "Unable to delete temp segment file (%d): %s\n", ret, oc->url);
+
+            return 0;
+        }
+
         char *final_filename = av_strdup(oc->url);
         if (final_filename) {
             final_filename[strlen(final_filename) - 4] = '\0';
@@ -1122,6 +1136,7 @@ static const AVOption options[] = {
     { "write_empty_segments", "allow writing empty 'filler' segments", OFFSET(write_empty), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, E },
     { "segment_write_temp", "write segments as temp files and rename on completion", OFFSET(segment_write_temp), AV_OPT_TYPE_BOOL,   {.i64 = 0}, 0, 1, E }, 
     { "segment_limit", "stop output once the specified number of segments has been written", OFFSET(segment_limit), AV_OPT_TYPE_INT, {.i64 = 0}, 0, INT_MAX, E },
+    { "drop_partial_offset", "relative time offset until which partial end segments will be dropped", OFFSET(drop_partial_offset), AV_OPT_TYPE_DURATION, {.i64 = AV_NOPTS_VALUE}, -INT64_MAX, INT64_MAX, E },
     { "min_frame_time", "drop any frames earlier", OFFSET(min_frame_time), AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, INT64_MAX, E },
     { NULL },
 };
