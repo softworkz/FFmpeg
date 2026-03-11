@@ -2467,6 +2467,10 @@ static int hls_init_file_resend(AVFormatContext *s, VariantStream *vs)
     avio_write(vs->out, vs->init_buffer, vs->init_range_length);
     hlsenc_io_close(s, &vs->out, hls->fmp4_init_filename);
 
+    av_log(NULL, AV_LOG_INFO,
+           "InitFileComplete, VariantStream=%d basename=%s filename=%s\n",
+           vs->number, vs->basename, av_basename(vs->base_output_dirname));
+
     return ret;
 }
 
