@@ -235,7 +235,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *in)
     /* read peak from side data if not passed in */
     if (!peak) {
         peak = ff_determine_signal_peak(in);
-        av_log(s, AV_LOG_DEBUG, "Computed signal peak: %f\n", peak);
+        av_log(s, AV_LOG_DEBUG, "Peak from side data: %f\n", peak);
     }
 
     /* load original color space even if pixel format is RGB to compute overbrights */
