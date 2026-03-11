@@ -289,10 +289,10 @@ static int config_output(AVFilterLink *outlink)
         AVHWFramesContext *hw_frame0 = (AVHWFramesContext *)l0->hw_frames_ctx->data;
         AVHWFramesContext *hw_frame1 = (AVHWFramesContext *)l1->hw_frames_ctx->data;
 
-        if (hw_frame0->device_ctx != hw_frame1->device_ctx) {
-            av_log(ctx, AV_LOG_ERROR, "Inputs with different underlying QSV devices are forbidden.\n");
-            return AVERROR(EINVAL);
-        }
+        ////if (hw_frame0->device_ctx != hw_frame1->device_ctx) {
+        ////    av_log(ctx, AV_LOG_ERROR, "Inputs with different underlying QSV devices are forbidden.\n");
+        ////    return AVERROR(EINVAL);
+        ////}
         vpp->qsv_param.out_sw_format = hw_frame0->sw_format;
     }
 
