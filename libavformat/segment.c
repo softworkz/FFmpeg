@@ -417,8 +417,8 @@ static int segment_end(AVFormatContext *s, int write_trailer, int is_last)
         }
     }
 
-    av_log(s, AV_LOG_VERBOSE, "segment:'%s' count:%d ended\n",
-           seg->avf->url, seg->segment_count);
+    ////av_log(s, AV_LOG_VERBOSE, "segment:'%s' count:%d ended\n",
+    ////       seg->avf->url, seg->segment_count);
     seg->segment_count++;
 
     if (seg->increment_tc) {
@@ -473,6 +473,13 @@ end:
             return AVERROR(ENOMEM);
         }
     }
+
+    av_log(NULL, AV_LOG_INFO, "SegmentComplete=%s:%d Index=%d Start=%f End=%f Duration=%f offset_pts=%s start_pts=%s Frames=%d filename=%s\n",
+           av_get_media_type_string(s->streams[seg->reference_stream_index]->codecpar->codec_type),
+           seg->reference_stream_index, seg->segment_idx, seg->cur_entry.start_time, seg->cur_entry.end_time, 
+           seg->cur_entry.end_time - seg->cur_entry.start_time, av_ts2str(seg->cur_entry.offset_pts), av_ts2str(seg->cur_entry.start_pts),
+           seg->segment_frame_count, seg->cur_entry.filename);
+
     return ret;
 }
 
@@ -990,6 +997,8 @@ calc_times:
         pkt->pts += offset;
     if (pkt->dts != AV_NOPTS_VALUE)
         pkt->dts += offset;
+
+    seg->cur_entry.offset_pts = av_rescale_q(offset, st->time_base, AV_TIME_BASE_Q);
 
     av_log(s, AV_LOG_DEBUG, " -> pts:%s pts_time:%s dts:%s dts_time:%s\n",
            av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, &st->time_base),
