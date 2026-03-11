@@ -932,6 +932,20 @@ static int seg_write_packet(AVFormatContext *s, AVPacket *pkt)
         }
     }
 
+    ////AVCodecParameters *codec_par = seg->avf->streams[st->index]->codecpar;
+    ////if (st->codecpar->extradata_size > 0 && codec_par->extradata_size != st->codecpar->extradata_size) {
+    ////    av_log(s, AV_LOG_DEBUG, "Update segment stream extra data (size %d) from output stream extra data (size %d).\n",
+    ////           codec_par->extradata_size, st->codecpar->extradata_size);
+
+    ////    ret = ff_alloc_extradata(codec_par, st->codecpar->extradata_size);
+    ////    if (ret < 0) {
+    ////        av_log(s, AV_LOG_WARNING, "Unable to add extradata to output parameters. Output segments may be invalid.\n");
+    ////        goto calc_times;
+    ////    }
+
+    ////    memcpy(codec_par->extradata, st->codecpar->extradata, st->codecpar->extradata_size);
+    ////}
+
 calc_times:
     ////if (pkt->stream_index == seg->reference_stream_index &&
     ////    (pkt->flags & AV_PKT_FLAG_KEY || seg->break_non_keyframes) &&
