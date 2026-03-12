@@ -134,7 +134,7 @@ static void get_eotf_st2084_lut(float(* lin_lut)[1024], float(* delin_lut)[1024]
 // under a typical presentation gamma of about 2.0.
 static const float sdr_avg = 0.25f;
 
-static int tonemap_opencl_init(AVFilterContext *avctx)
+static int extratonemap_opencl_init(AVFilterContext *avctx)
 {
     TonemapOpenCLContext *ctx = avctx->priv;
     int rgb2rgb_passthrough = 1;
@@ -296,7 +296,7 @@ fail:
     return err;
 }
 
-static int tonemap_opencl_config_output(AVFilterLink *outlink)
+static int extratonemap_opencl_config_output(AVFilterLink *outlink)
 {
     AVFilterContext *avctx = outlink->src;
     TonemapOpenCLContext *s = avctx->priv;
@@ -385,7 +385,7 @@ fail:
     return err;
 }
 
-static int tonemap_opencl_filter_frame(AVFilterLink *inlink, AVFrame *input)
+static int extratonemap_opencl_filter_frame(AVFilterLink *inlink, AVFrame *input)
 {
     AVFilterContext    *avctx = inlink->dst;
     AVFilterLink     *outlink = avctx->outputs[0];
@@ -446,12 +446,12 @@ static int tonemap_opencl_filter_frame(AVFilterLink *inlink, AVFrame *input)
         }
 
         if (input_frames_ctx->sw_format != AV_PIX_FMT_P010) {
-            av_log(ctx, AV_LOG_ERROR, "unsupported format in tonemap_opencl.\n");
+            av_log(ctx, AV_LOG_ERROR, "unsupported format in extratonemap_opencl.\n");
             err = AVERROR(ENOSYS);
             goto fail;
         }
 
-        err = tonemap_opencl_init(avctx);
+        err = extratonemap_opencl_init(avctx);
         if (err < 0)
             goto fail;
     }
@@ -483,7 +483,7 @@ fail:
     return err;
 }
 
-static av_cold void tonemap_opencl_uninit(AVFilterContext *avctx)
+static av_cold void extratonemap_opencl_uninit(AVFilterContext *avctx)
 {
     TonemapOpenCLContext *ctx = avctx->priv;
     cl_int cle;
@@ -507,7 +507,7 @@ static av_cold void tonemap_opencl_uninit(AVFilterContext *avctx)
 
 #define OFFSET(x) offsetof(TonemapOpenCLContext, x)
 #define FLAGS (AV_OPT_FLAG_FILTERING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
-static const AVOption tonemap_opencl_options[] = {
+static const AVOption extratonemap_opencl_options[] = {
     { "tonemap",      "tonemap algorithm selection", OFFSET(tonemap), AV_OPT_TYPE_INT, {.i64 = TONEMAP_NONE}, TONEMAP_NONE, TONEMAP_MAX - 1, FLAGS, .unit = "tonemap" },
     {     "none",     0, 0, AV_OPT_TYPE_CONST, {.i64 = TONEMAP_NONE},              0, 0, FLAGS, .unit = "tonemap" },
     {     "linear",   0, 0, AV_OPT_TYPE_CONST, {.i64 = TONEMAP_LINEAR},            0, 0, FLAGS, .unit = "tonemap" },
@@ -541,35 +541,35 @@ static const AVOption tonemap_opencl_options[] = {
     { NULL }
 };
 
-AVFILTER_DEFINE_CLASS(tonemap_opencl);
+AVFILTER_DEFINE_CLASS(extratonemap_opencl);
 
-static const AVFilterPad tonemap_opencl_inputs[] = {
+static const AVFilterPad extratonemap_opencl_inputs[] = {
     {
         .name         = "default",
         .type         = AVMEDIA_TYPE_VIDEO,
-        .filter_frame = &tonemap_opencl_filter_frame,
+        .filter_frame = &extratonemap_opencl_filter_frame,
         .config_props = &ff_opencl_filter_config_input,
     },
 };
 
-static const AVFilterPad tonemap_opencl_outputs[] = {
+static const AVFilterPad extratonemap_opencl_outputs[] = {
     {
         .name         = "default",
         .type         = AVMEDIA_TYPE_VIDEO,
-        .config_props = &tonemap_opencl_config_output,
+        .config_props = &extratonemap_opencl_config_output,
     },
 };
 
-const FFFilter ff_vf_tonemap_opencl = {
-    .p.name         = "tonemap_opencl",
+const FFFilter ff_vf_extratonemap_opencl = {
+    .p.name         = "extratonemap_opencl",
     .p.description  = NULL_IF_CONFIG_SMALL("Perform HDR to SDR conversion with tonemapping."),
-    .p.priv_class   = &tonemap_opencl_class,
+    .p.priv_class   = &extratonemap_opencl_class,
     .p.flags        = AVFILTER_FLAG_HWDEVICE,
     .priv_size      = sizeof(TonemapOpenCLContext),
     .init           = &ff_opencl_filter_init,
-    .uninit         = &tonemap_opencl_uninit,
-    FILTER_INPUTS(tonemap_opencl_inputs),
-    FILTER_OUTPUTS(tonemap_opencl_outputs),
+    .uninit         = &extratonemap_opencl_uninit,
+    FILTER_INPUTS(extratonemap_opencl_inputs),
+    FILTER_OUTPUTS(extratonemap_opencl_outputs),
     FILTER_SINGLE_PIXFMT(AV_PIX_FMT_OPENCL),
     .flags_internal = FF_FILTER_FLAG_HWFRAME_AWARE,
 };

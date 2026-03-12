@@ -31,7 +31,7 @@ extern const char *ff_source_overlay_cl;
 extern const char *ff_source_pad_cl;
 extern const char *ff_source_remap_cl;
 extern const char *ff_source_supertonemap_cl;
-extern const char *ff_source-extratonemap_cl;
+extern const char *ff_source_extratonemap_cl;
 extern const char *ff_source_tonemap_cl;
 extern const char *ff_source_transpose_cl;
 extern const char *ff_source_unsharp_cl;
