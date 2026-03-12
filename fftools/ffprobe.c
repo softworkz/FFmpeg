@@ -1256,49 +1256,6 @@ static void show_packet(AVTextFormatContext *tfc, InputFile *ifile, AVPacket *pk
     fflush(stdout);
 }
 
-static void show_subtitle(AVTextFormatContext *tfc, AVFrame *sub, AVStream *stream,
-                          AVFormatContext *fmt_ctx)
-{
-    AVBPrint pbuf;
-    const char *s;
-
-    av_bprint_init(&pbuf, 1, AV_BPRINT_SIZE_UNLIMITED);
-
-    avtext_print_section_header(tfc, NULL, SECTION_ID_SUBTITLE);
-
-    print_str ("media_type",         "subtitle");
-    print_ts  ("pts",                 sub->subtitle_timing.start_pts);
-    print_time("pts_time",            sub->subtitle_timing.start_pts, &AV_TIME_BASE_Q);
-    print_time("duration",            sub->subtitle_timing.duration, &AV_TIME_BASE_Q);
-
-    // Remain compatible with previous outputs
-    switch (sub->format) {
-    case AV_SUBTITLE_FMT_BITMAP:
-        print_int ("format",         0);
-        break;
-    case AV_SUBTITLE_FMT_TEXT:
-        print_int ("format",         1);
-        break;
-    case AV_SUBTITLE_FMT_ASS:
-        print_int ("format",         1);
-        break;
-    default:
-        print_int ("format",         -1);
-        break;
-    }
-
-    s = av_get_subtitle_fmt_name(sub->format);
-    if (s) print_str    ("format_str", s);
-    else   print_str_opt("format_str", "unknown");
-
-    print_int ("num_subtitle_rects",           sub->num_subtitle_areas);
-
-    avtext_print_section_footer(tfc);
-
-    av_bprint_finalize(&pbuf, NULL);
-    fflush(stdout);
-}
-
 static void print_frame_side_data(AVTextFormatContext *tfc,
                                   const AVFrame *frame,
                                   const AVStream *stream)
@@ -1378,6 +1335,7 @@ static void show_frame(AVTextFormatContext *tfc, AVFrame *frame, AVStream *strea
     if (s) print_str    ("media_type", s);
     else   print_str_opt("media_type", "unknown");
     print_int("stream_index",           stream->index);
+    print_int("format",                 frame->format);
     print_int("key_frame",           !!(frame->flags & AV_FRAME_FLAG_KEY));
     print_ts  ("pts",                   frame->pts);
     print_time("pts_time",              frame->pts, &stream->time_base);
@@ -1434,7 +1392,22 @@ static void show_frame(AVTextFormatContext *tfc, AVFrame *frame, AVStream *strea
         } else
             print_str_opt("channel_layout", "unknown");
         break;
+
+    case AVMEDIA_TYPE_SUBTITLE:
+        print_int("width",                   frame->width);
+        print_int("height",                  frame->height);
+        s = av_get_subtitle_fmt_name(frame->format);
+        if (s) print_str    ("subtitle_fmt", s);
+        else   print_str_opt("subtitle_fmt", "unknown");
+
+        print_ts  ("subtitle_pts",           frame->subtitle_timing.start_pts);
+        print_time("subtitle_pts_time",      frame->subtitle_timing.start_pts, &AV_TIME_BASE_Q);
+        print_ts  ("subtitle_duration",      frame->subtitle_timing.duration);
+        print_time("subtitle_duration_time", frame->subtitle_timing.duration, &AV_TIME_BASE_Q);
+        print_int ("num_subtitle_rects",     frame->num_subtitle_areas);
+        break;
     }
+
     if (do_show_frame_tags)
         show_tags(tfc, frame->metadata, SECTION_ID_FRAME_TAGS);
     if (do_show_log)
@@ -1492,15 +1465,11 @@ static av_always_inline int process_frame(AVTextFormatContext *tfc,
     if (ret < 0)
         return ret;
     if (got_frame) {
-        int is_sub = (par->codec_type == AVMEDIA_TYPE_SUBTITLE);
         nb_streams_frames[pkt->stream_index]++;
         if (do_show_frames)
-            if (is_sub)
-                show_subtitle(tfc, frame, ifile->streams[pkt->stream_index].st, fmt_ctx);
-            else
-                show_frame(tfc, frame, ifile->streams[pkt->stream_index].st, fmt_ctx);
+            show_frame(tfc, frame, ifile->streams[pkt->stream_index].st, fmt_ctx);
 
-        if (!is_sub && do_analyze_frames) {
+        if (do_analyze_frames) {
             for (int i = 0; i < frame->nb_side_data; i++) {
                 if (frame->side_data[i]->type == AV_FRAME_DATA_A53_CC)
                     streams_with_closed_captions[pkt->stream_index] = 1;
