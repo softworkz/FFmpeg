@@ -434,9 +434,9 @@ static int update_settings(AVFilterContext *ctx)
         .smoothing_period = s->smoothing,
         .scene_threshold_low = s->scene_low,
         .scene_threshold_high = s->scene_high,
-#if PL_API_VER >= 263
+////#if PL_API_VER >= 263
         .percentile = s->percentile,
-#endif
+////#endif
     );
 
     opts->color_map_params = *pl_color_map_params(
@@ -444,10 +444,10 @@ static int update_settings(AVFilterContext *ctx)
         .tone_mapping_param = s->tonemapping_param,
         .inverse_tone_mapping = s->inverse_tonemapping,
         .lut_size = s->tonemapping_lut_size,
-#if PL_API_VER >= 285
+////#if PL_API_VER >= 285
         .contrast_recovery = s->contrast_recovery,
         .contrast_smoothness = s->contrast_smoothness,
-#endif
+////#endif
     );
 
     set_gamut_mode(&opts->color_map_params, gamut_mode);
@@ -471,9 +471,9 @@ static int update_settings(AVFilterContext *ctx)
             (float) s->fillcolor[1] / UINT8_MAX,
             (float) s->fillcolor[2] / UINT8_MAX,
         },
-#if PL_API_VER >= 277
+////#if PL_API_VER >= 277
         .corner_rounding = s->corner_rounding,
-#endif
+////#endif
 
         .deinterlace_params = &opts->deinterlace_params,
         .deband_params = s->deband ? &opts->deband_params : NULL,
