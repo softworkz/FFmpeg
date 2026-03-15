@@ -1988,25 +1988,25 @@ static int create_streams(Muxer *mux, const OptionsContext *o)
     if (ret < 0)
         return ret;
 
-    // setup fix_sub_duration_heartbeat mappings
-    for (unsigned i = 0; i < oc->nb_streams; i++) {
-        MuxStream *src = ms_from_ost(mux->of.streams[i]);
+    ////// setup fix_sub_duration_heartbeat mappings
+    ////for (unsigned i = 0; i < oc->nb_streams; i++) {
+    ////    MuxStream *src = ms_from_ost(mux->of.streams[i]);
 
-        if (!src->ost.fix_sub_duration_heartbeat)
-            continue;
+    ////    if (!src->ost.fix_sub_duration_heartbeat)
+    ////        continue;
 
-        for (unsigned j = 0; j < oc->nb_streams; j++) {
-            MuxStream *dst = ms_from_ost(mux->of.streams[j]);
+    ////    for (unsigned j = 0; j < oc->nb_streams; j++) {
+    ////        MuxStream *dst = ms_from_ost(mux->of.streams[j]);
 
-            if (src == dst || dst->ost.type != AVMEDIA_TYPE_SUBTITLE ||
-                !dst->ost.enc || !dst->ost.ist || !dst->ost.ist->fix_sub_duration)
-                continue;
+    ////        if (src == dst || dst->ost.type != AVMEDIA_TYPE_SUBTITLE ||
+    ////            !dst->ost.enc || !dst->ost.ist || !dst->ost.ist->fix_sub_duration)
+    ////            continue;
 
-            ret = sch_mux_sub_heartbeat_add(mux->sch, mux->sch_idx, src->sch_idx,
-                                            dst->sch_idx_src);
+    ////        ret = sch_mux_sub_heartbeat_add(mux->sch, mux->sch_idx, src->sch_idx,
+    ////                                        dst->sch_idx_src);
 
-        }
-    }
+    ////    }
+    ////}
 
     // handle -apad
     if (o->shortest) {

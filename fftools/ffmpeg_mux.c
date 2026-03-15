@@ -40,7 +40,7 @@
 
 typedef struct MuxThreadContext {
     AVPacket *pkt;
-    AVPacket *fix_sub_duration_pkt;
+    ////AVPacket *fix_sub_duration_pkt;
 } MuxThreadContext;
 
 static Muxer *mux_from_of(OutputFile *of)
@@ -306,16 +306,16 @@ static int mux_packet_filter(Muxer *mux, MuxThreadContext *mt,
 
     // emit heartbeat for -fix_sub_duration;
     // we are only interested in heartbeats on on random access points.
-    if (pkt && (pkt->flags & AV_PKT_FLAG_KEY)) {
-        mt->fix_sub_duration_pkt->opaque    = (void*)(intptr_t)PKT_OPAQUE_FIX_SUB_DURATION;
-        mt->fix_sub_duration_pkt->pts       = pkt->pts;
-        mt->fix_sub_duration_pkt->time_base = pkt->time_base;
+    ////if (pkt && (pkt->flags & AV_PKT_FLAG_KEY)) {
+    ////    mt->fix_sub_duration_pkt->opaque    = (void*)(intptr_t)PKT_OPAQUE_FIX_SUB_DURATION;
+    ////    mt->fix_sub_duration_pkt->pts       = pkt->pts;
+    ////    mt->fix_sub_duration_pkt->time_base = pkt->time_base;
 
-        ret = sch_mux_sub_heartbeat(mux->sch, mux->sch_idx, ms->sch_idx,
-                                    mt->fix_sub_duration_pkt);
-        if (ret < 0)
-            goto fail;
-    }
+    ////    ret = sch_mux_sub_heartbeat(mux->sch, mux->sch_idx, ms->sch_idx,
+    ////                                mt->fix_sub_duration_pkt);
+    ////    if (ret < 0)
+    ////        goto fail;
+    ////}
 
     if (ms->bsf_ctx) {
         int bsf_eof = 0;
@@ -380,7 +380,6 @@ static void thread_set_name(Muxer *mux)
 static void mux_thread_uninit(MuxThreadContext *mt)
 {
     av_packet_free(&mt->pkt);
-    av_packet_free(&mt->fix_sub_duration_pkt);
 
     memset(mt, 0, sizeof(*mt));
 }
@@ -391,10 +390,6 @@ static int mux_thread_init(MuxThreadContext *mt)
 
     mt->pkt = av_packet_alloc();
     if (!mt->pkt)
-        goto fail;
-
-    mt->fix_sub_duration_pkt = av_packet_alloc();
-    if (!mt->fix_sub_duration_pkt)
         goto fail;
 
     return 0;

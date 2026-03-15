@@ -63,7 +63,7 @@ typedef struct DemuxStream {
     int                      finished;
 
     int                      streamcopy_needed;
-    int                      have_sub2video;
+    ////int                      have_sub2video;
     int                      reinit_filters;
     int                      autorotate;
     int                      apply_cropping;
@@ -149,7 +149,7 @@ typedef struct Demuxer {
 
     Scheduler            *sch;
 
-    AVPacket             *pkt_heartbeat;
+    ////AVPacket             *pkt_heartbeat;
 
     int                   read_started;
     int                   nb_streams_used;
@@ -1208,32 +1208,32 @@ int ist_filter_add(InputStream *ist, InputFilter *ifilter, int is_simple,
                 opts->flags |= IFILTER_FLAG_CROP;
         }
     } else if (ist->par->codec_type == AVMEDIA_TYPE_SUBTITLE) {
-        /* Compute the size of the canvas for the subtitles stream.
-           If the subtitles codecpar has set a size, use it. Otherwise use the
-           maximum dimensions of the video streams in the same file. */
-        opts->sub2video_width  = ist->par->width;
-        opts->sub2video_height = ist->par->height;
-        if (!(opts->sub2video_width && opts->sub2video_height)) {
-            for (int j = 0; j < d->f.nb_streams; j++) {
-                AVCodecParameters *par1 = d->f.streams[j]->par;
-                if (par1->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    opts->sub2video_width  = FFMAX(opts->sub2video_width,  par1->width);
-                    opts->sub2video_height = FFMAX(opts->sub2video_height, par1->height);
-                }
-            }
-        }
+        /////* Compute the size of the canvas for the subtitles stream.
+        ////   If the subtitles codecpar has set a size, use it. Otherwise use the
+        ////   maximum dimensions of the video streams in the same file. */
+        ////opts->sub2video_width  = ist->par->width;
+        ////opts->sub2video_height = ist->par->height;
+        ////if (!(opts->sub2video_width && opts->sub2video_height)) {
+        ////    for (int j = 0; j < d->f.nb_streams; j++) {
+        ////        AVCodecParameters *par1 = d->f.streams[j]->par;
+        ////        if (par1->codec_type == AVMEDIA_TYPE_VIDEO) {
+        ////            opts->sub2video_width  = FFMAX(opts->sub2video_width,  par1->width);
+        ////            opts->sub2video_height = FFMAX(opts->sub2video_height, par1->height);
+        ////        }
+        ////    }
+        ////}
 
-        if (!(opts->sub2video_width && opts->sub2video_height)) {
-            opts->sub2video_width  = FFMAX(opts->sub2video_width,  720);
-            opts->sub2video_height = FFMAX(opts->sub2video_height, 576);
-        }
+        ////if (!(opts->sub2video_width && opts->sub2video_height)) {
+        ////    opts->sub2video_width  = FFMAX(opts->sub2video_width,  720);
+        ////    opts->sub2video_height = FFMAX(opts->sub2video_height, 576);
+        ////}
 
-        if (!d->pkt_heartbeat) {
-            d->pkt_heartbeat = av_packet_alloc();
-            if (!d->pkt_heartbeat)
-                return AVERROR(ENOMEM);
-        }
-        ds->have_sub2video = 1;
+        ////if (!d->pkt_heartbeat) {
+        ////    d->pkt_heartbeat = av_packet_alloc();
+        ////    if (!d->pkt_heartbeat)
+        ////        return AVERROR(ENOMEM);
+        ////}
+        ////ds->have_sub2video = 1;
     }
 
     ret = av_frame_copy_props(opts->fallback, ds->decoded_params);

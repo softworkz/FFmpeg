@@ -496,9 +496,9 @@ int sch_mux_receive(Scheduler *sch, unsigned mux_idx, struct AVPacket *pkt);
  */
 void sch_mux_receive_finish(Scheduler *sch, unsigned mux_idx, unsigned stream_idx);
 
-int sch_mux_sub_heartbeat_add(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
-                              unsigned dec_idx);
-int sch_mux_sub_heartbeat(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
-                          const AVPacket *pkt);
+////int sch_mux_sub_heartbeat_add(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
+////                              unsigned dec_idx);
+////int sch_mux_sub_heartbeat(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
+////                          const AVPacket *pkt);
 
 #endif /* FFTOOLS_FFMPEG_SCHED_H */
