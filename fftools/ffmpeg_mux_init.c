@@ -1540,8 +1540,8 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
     opt_match_per_stream_int(ost, &o->bits_per_raw_sample, oc, st,
                                    &ost->bits_per_raw_sample);
 
-    opt_match_per_stream_int(ost, &o->fix_sub_duration_heartbeat,
-                             oc, st, &ost->fix_sub_duration_heartbeat);
+    ////opt_match_per_stream_int(ost, &o->fix_sub_duration_heartbeat,
+    ////                         oc, st, &ost->fix_sub_duration_heartbeat);
 
     if (oc->oformat->flags & AVFMT_GLOBALHEADER && ost->enc)
         ost->enc->enc_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;

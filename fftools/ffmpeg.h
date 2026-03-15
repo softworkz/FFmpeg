@@ -658,15 +658,6 @@ typedef struct OutputStream {
 
     EncStats enc_stats_pre;
     EncStats enc_stats_post;
-
-    /*
-     * bool on whether this stream should be utilized for splitting
-     * subtitles utilizing fix_sub_duration at random access points.
-     */
-    unsigned int fix_sub_duration_heartbeat;
-
-    /* subtitle_pts values of the last subtitle frame having arrived for encoding */
-    int64_t last_subtitle_pts;
 } OutputStream;
 
 typedef struct OutputFile {
