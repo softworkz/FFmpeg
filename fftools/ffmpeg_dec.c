@@ -68,10 +68,6 @@ typedef struct DecoderPriv {
     int64_t             last_filter_in_rescale_delta;
     int                 last_frame_sample_rate;
 
-    /* previous decoded subtitles */
-    ////AVFrame            *sub_prev[2];
-    ////AVFrame            *sub_heartbeat;
-
     Scheduler          *sch;
     unsigned            sch_idx;
 
@@ -139,10 +135,6 @@ void dec_free(Decoder **pdec)
     av_packet_free(&dp->pkt);
 
     av_dict_free(&dp->standalone_init.opts);
-
-    ////for (int i = 0; i < FF_ARRAY_ELEMS(dp->sub_prev); i++)
-    ////    av_frame_free(&dp->sub_prev[i]);
-    ////av_frame_free(&dp->sub_heartbeat);
 
     av_freep(&dp->parent_name);
 
@@ -458,191 +450,6 @@ static int video_frame_process(DecoderPriv *dp, AVFrame *frame,
 
     return 0;
 }
-
-////static int copy_av_subtitle(AVSubtitle *dst, const AVSubtitle *src)
-////{
-////    int ret = AVERROR_BUG;
-////    AVSubtitle tmp = {
-////        .format = src->format,
-////        .start_display_time = src->start_display_time,
-////        .end_display_time = src->end_display_time,
-////        .num_rects = 0,
-////        .rects = NULL,
-////        .pts = src->pts
-////    };
-////
-////    if (!src->num_rects)
-////        goto success;
-////
-////    if (!(tmp.rects = av_calloc(src->num_rects, sizeof(*tmp.rects))))
-////        return AVERROR(ENOMEM);
-////
-////    for (int i = 0; i < src->num_rects; i++) {
-////        AVSubtitleRect *src_rect = src->rects[i];
-////        AVSubtitleRect *dst_rect;
-////
-////        if (!(dst_rect = tmp.rects[i] = av_mallocz(sizeof(*tmp.rects[0])))) {
-////            ret = AVERROR(ENOMEM);
-////            goto cleanup;
-////        }
-////
-////        tmp.num_rects++;
-////
-////        dst_rect->type      = src_rect->type;
-////        dst_rect->flags     = src_rect->flags;
-////
-////        dst_rect->x         = src_rect->x;
-////        dst_rect->y         = src_rect->y;
-////        dst_rect->w         = src_rect->w;
-////        dst_rect->h         = src_rect->h;
-////        dst_rect->nb_colors = src_rect->nb_colors;
-////
-////        if (src_rect->text)
-////            if (!(dst_rect->text = av_strdup(src_rect->text))) {
-////                ret = AVERROR(ENOMEM);
-////                goto cleanup;
-////            }
-////
-////        if (src_rect->ass)
-////            if (!(dst_rect->ass = av_strdup(src_rect->ass))) {
-////                ret = AVERROR(ENOMEM);
-////                goto cleanup;
-////            }
-////
-////        for (int j = 0; j < 4; j++) {
-////            // SUBTITLE_BITMAP images are special in the sense that they
-////            // are like PAL8 images. first pointer to data, second to
-////            // palette. This makes the size calculation match this.
-////            size_t buf_size = src_rect->type == SUBTITLE_BITMAP && j == 1 ?
-////                              AVPALETTE_SIZE :
-////                              src_rect->h * src_rect->linesize[j];
-////
-////            if (!src_rect->data[j])
-////                continue;
-////
-////            if (!(dst_rect->data[j] = av_memdup(src_rect->data[j], buf_size))) {
-////                ret = AVERROR(ENOMEM);
-////                goto cleanup;
-////            }
-////            dst_rect->linesize[j] = src_rect->linesize[j];
-////        }
-////    }
-////
-////success:
-////    *dst = tmp;
-////
-////    return 0;
-////
-////cleanup:
-////    avsubtitle_free(&tmp);
-////
-////    return ret;
-////}
-////
-////static void subtitle_free(void *opaque, uint8_t *data)
-////{
-////    AVSubtitle *sub = (AVSubtitle*)data;
-////    avsubtitle_free(sub);
-////    av_free(sub);
-////}
-
-////static int subtitle_wrap_frame(AVFrame *frame, AVSubtitle *subtitle, int copy)
-////{
-////    AVBufferRef *buf;
-////    AVSubtitle *sub;
-////    int ret;
-////
-////    if (copy) {
-////        sub = av_mallocz(sizeof(*sub));
-////        ret = sub ? copy_av_subtitle(sub, subtitle) : AVERROR(ENOMEM);
-////        if (ret < 0) {
-////            av_freep(&sub);
-////            return ret;
-////        }
-////    } else {
-////        sub = av_memdup(subtitle, sizeof(*subtitle));
-////        if (!sub)
-////            return AVERROR(ENOMEM);
-////        memset(subtitle, 0, sizeof(*subtitle));
-////    }
-////
-////    buf = av_buffer_create((uint8_t*)sub, sizeof(*sub),
-////                           subtitle_free, NULL, 0);
-////    if (!buf) {
-////        avsubtitle_free(sub);
-////        av_freep(&sub);
-////        return AVERROR(ENOMEM);
-////    }
-////
-////    frame->buf[0] = buf;
-////
-////    return 0;
-////}
-
-static int process_subtitle(DecoderPriv *dp, AVFrame *frame)
-{
-    const AVSubtitle *subtitle = (AVSubtitle*)frame->buf[0]->data;
-    int ret = 0;
-
-    ////if (dp->flags & DECODER_FLAG_FIX_SUB_DURATION) {
-    ////    AVSubtitle *sub_prev = dp->sub_prev[0]->buf[0] ?
-    ////                           (AVSubtitle*)dp->sub_prev[0]->buf[0]->data : NULL;
-    ////    int end = 1;
-    ////    if (sub_prev) {
-    ////        end = av_rescale(subtitle->pts - sub_prev->pts,
-    ////                         1000, AV_TIME_BASE);
-    ////        if (end < sub_prev->end_display_time) {
-    ////            av_log(dp, AV_LOG_DEBUG,
-    ////                   "Subtitle duration reduced from %"PRId32" to %d%s\n",
-    ////                   sub_prev->end_display_time, end,
-    ////                   end <= 0 ? ", dropping it" : "");
-    ////            sub_prev->end_display_time = end;
-    ////        }
-    ////    }
-
-    ////    av_frame_unref(dp->sub_prev[1]);
-    ////    av_frame_move_ref(dp->sub_prev[1], frame);
-
-    ////    frame    = dp->sub_prev[0];
-    ////    subtitle = frame->buf[0] ? (AVSubtitle*)frame->buf[0]->data : NULL;
-
-    ////    FFSWAP(AVFrame*, dp->sub_prev[0], dp->sub_prev[1]);
-
-    ////    if (end <= 0)
-    ////        return 0;
-    ////}
-
-    if (!subtitle)
-        return 0;
-
-    ret = sch_dec_send(dp->sch, dp->sch_idx, 0, frame);
-    if (ret < 0)
-        av_frame_unref(frame);
-
-    return ret == AVERROR_EOF ? AVERROR_EXIT : ret;
-}
-
-////static int fix_sub_duration_heartbeat(DecoderPriv *dp, int64_t signal_pts)
-////{
-////    int ret = AVERROR_BUG;
-////    AVSubtitle *prev_subtitle = dp->sub_prev[0]->buf[0] ?
-////        (AVSubtitle*)dp->sub_prev[0]->buf[0]->data : NULL;
-////    AVSubtitle *subtitle;
-////
-////    if (!(dp->flags & DECODER_FLAG_FIX_SUB_DURATION) || !prev_subtitle ||
-////        !prev_subtitle->num_rects || signal_pts <= prev_subtitle->pts)
-////        return 0;
-////
-////    av_frame_unref(dp->sub_heartbeat);
-////    ret = subtitle_wrap_frame(dp->sub_heartbeat, prev_subtitle, 1);
-////    if (ret < 0)
-////        return ret;
-////
-////    subtitle = (AVSubtitle*)dp->sub_heartbeat->buf[0]->data;
-////    subtitle->pts = signal_pts;
-////
-////    return process_subtitle(dp, dp->sub_heartbeat);
-////}
 
 static int decode_subtitles_decode(AVCodecContext *avctx, AVFrame *frame, int *got_frame, const AVPacket *pkt)
 {
@@ -1659,18 +1466,6 @@ static int dec_open(DecoderPriv *dp, AVDictionary **dec_opts,
     dp->parent_name = av_strdup(o->name ? o->name : "");
     if (!dp->parent_name)
         return AVERROR(ENOMEM);
-
-    ////if (codec->type == AVMEDIA_TYPE_SUBTITLE &&
-    ////    (dp->flags & DECODER_FLAG_FIX_SUB_DURATION)) {
-    ////    for (int i = 0; i < FF_ARRAY_ELEMS(dp->sub_prev); i++) {
-    ////        dp->sub_prev[i] = av_frame_alloc();
-    ////        if (!dp->sub_prev[i])
-    ////            return AVERROR(ENOMEM);
-    ////    }
-    ////    ////dp->sub_heartbeat = av_frame_alloc();
-    ////    ////if (!dp->sub_heartbeat)
-    ////    ////    return AVERROR(ENOMEM);
-    ////}
 
     dp->sar_override = o->par->sample_aspect_ratio;
 

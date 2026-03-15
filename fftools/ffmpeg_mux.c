@@ -40,7 +40,6 @@
 
 typedef struct MuxThreadContext {
     AVPacket *pkt;
-    ////AVPacket *fix_sub_duration_pkt;
 } MuxThreadContext;
 
 static Muxer *mux_from_of(OutputFile *of)
@@ -303,19 +302,6 @@ static int mux_packet_filter(Muxer *mux, MuxThreadContext *mt,
         } else if (ret < 0)
             goto fail;
     }
-
-    // emit heartbeat for -fix_sub_duration;
-    // we are only interested in heartbeats on on random access points.
-    ////if (pkt && (pkt->flags & AV_PKT_FLAG_KEY)) {
-    ////    mt->fix_sub_duration_pkt->opaque    = (void*)(intptr_t)PKT_OPAQUE_FIX_SUB_DURATION;
-    ////    mt->fix_sub_duration_pkt->pts       = pkt->pts;
-    ////    mt->fix_sub_duration_pkt->time_base = pkt->time_base;
-
-    ////    ret = sch_mux_sub_heartbeat(mux->sch, mux->sch_idx, ms->sch_idx,
-    ////                                mt->fix_sub_duration_pkt);
-    ////    if (ret < 0)
-    ////        goto fail;
-    ////}
 
     if (ms->bsf_ctx) {
         int bsf_eof = 0;

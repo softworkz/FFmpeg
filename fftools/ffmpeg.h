@@ -93,11 +93,6 @@ enum FrameOpaque {
     FRAME_OPAQUE_SEND_COMMAND,
 };
 
-////enum PacketOpaque {
-////    PKT_OPAQUE_SUB_HEARTBEAT = 1,
-////    PKT_OPAQUE_FIX_SUB_DURATION,
-////};
-
 enum LatencyProbe {
     LATENCY_PROBE_DEMUX,
     LATENCY_PROBE_DEC_PRE,
@@ -290,9 +285,6 @@ typedef struct InputFilterOptions {
     unsigned            crop_left;
     unsigned            crop_right;
 
-    ////int                 sub2video_width;
-    ////int                 sub2video_height;
-
     // a combination of IFILTER_FLAG_*
     unsigned            flags;
 
@@ -410,7 +402,6 @@ typedef struct FilterGraph {
 } FilterGraph;
 
 enum DecoderFlags {
-    ////DECODER_FLAG_FIX_SUB_DURATION = (1 << 0),
     // input timestamps are unreliable (guessed by demuxer)
     DECODER_FLAG_TS_UNRELIABLE    = (1 << 1),
     // decoder should override timestamps by fixed framerate

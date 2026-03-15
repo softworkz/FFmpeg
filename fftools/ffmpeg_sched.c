@@ -191,9 +191,6 @@ typedef struct SchMuxStream {
     SchedulerNode       src;
     SchedulerNode       src_sched;
 
-    ////unsigned           *sub_heartbeat_dst;
-    ////unsigned         nb_sub_heartbeat_dst;
-
     PreMuxQueue         pre_mux_queue;
 
     // an EOF was generated while flushing the pre-mux queue
@@ -229,8 +226,6 @@ typedef struct SchMux {
     atomic_int          mux_started;
     ThreadQueue        *queue;
     unsigned            queue_size;
-
-    ////AVPacket           *sub_heartbeat_pkt;
 } SchMux;
 
 typedef struct SchFilterIn {
@@ -493,12 +488,8 @@ void sch_free(Scheduler **psch)
                     av_packet_free(&pkt);
                 av_fifo_freep2(&ms->pre_mux_queue.fifo);
             }
-
-            ////av_freep(&ms->sub_heartbeat_dst);
         }
         av_freep(&mux->streams);
-
-        ////av_packet_free(&mux->sub_heartbeat_pkt);
 
         tq_free(&mux->queue);
     }
@@ -1234,35 +1225,6 @@ int sch_mux_stream_ready(Scheduler *sch, unsigned mux_idx, unsigned stream_idx)
 
     return ret;
 }
-
-////int sch_mux_sub_heartbeat_add(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
-////                              unsigned dec_idx)
-////{
-////    SchMux       *mux;
-////    SchMuxStream *ms;
-////    int ret = 0;
-////
-////    av_assert0(mux_idx < sch->nb_mux);
-////    mux = &sch->mux[mux_idx];
-////
-////    av_assert0(stream_idx < mux->nb_streams);
-////    ms = &mux->streams[stream_idx];
-////
-////    ret = GROW_ARRAY(ms->sub_heartbeat_dst, ms->nb_sub_heartbeat_dst);
-////    if (ret < 0)
-////        return ret;
-////
-////    av_assert0(dec_idx < sch->nb_dec);
-////    ms->sub_heartbeat_dst[ms->nb_sub_heartbeat_dst - 1] = dec_idx;
-////
-////    if (!mux->sub_heartbeat_pkt) {
-////        mux->sub_heartbeat_pkt = av_packet_alloc();
-////        if (!mux->sub_heartbeat_pkt)
-////            return AVERROR(ENOMEM);
-////    }
-////
-////    return 0;
-////}
 
 static void unchoke_for_stream(Scheduler *sch, SchedulerNode src)
 {
@@ -2100,32 +2062,6 @@ void sch_mux_receive_finish(Scheduler *sch, unsigned mux_idx, unsigned stream_id
 
     pthread_mutex_unlock(&sch->schedule_lock);
 }
-
-////int sch_mux_sub_heartbeat(Scheduler *sch, unsigned mux_idx, unsigned stream_idx,
-////                          const AVPacket *pkt)
-////{
-////    SchMux       *mux;
-////    SchMuxStream *ms;
-////
-////    av_assert0(mux_idx < sch->nb_mux);
-////    mux = &sch->mux[mux_idx];
-////
-////    av_assert0(stream_idx < mux->nb_streams);
-////    ms = &mux->streams[stream_idx];
-////
-////    for (unsigned i = 0; i < ms->nb_sub_heartbeat_dst; i++) {
-////        SchDec *dst = &sch->dec[ms->sub_heartbeat_dst[i]];
-////        int ret;
-////
-////        ret = av_packet_copy_props(mux->sub_heartbeat_pkt, pkt);
-////        if (ret < 0)
-////            return ret;
-////
-////        tq_send(dst->queue, 0, mux->sub_heartbeat_pkt);
-////    }
-////
-////    return 0;
-////}
 
 static int mux_done(Scheduler *sch, unsigned mux_idx)
 {
