@@ -114,10 +114,10 @@ enum FFCodecType {
      * audio and video codecs only. */
     FF_CODEC_CB_TYPE_RECEIVE_FRAME,
     /* The codec is an encoder using the encode callback;
-     * audio and video codecs only. */
+     * audio, video and subtitle codecs only. */
     FF_CODEC_CB_TYPE_ENCODE,
     /* The codec is an encoder using the receive_packet callback;
-     * audio and video codecs only. */
+     * audio, video and subtitle codecs only. */
     FF_CODEC_CB_TYPE_RECEIVE_PACKET,
 };
 
