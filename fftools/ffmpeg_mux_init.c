@@ -1525,7 +1525,7 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
     }
 
     if (ms->sch_idx >= 0) {
-        int max_muxing_queue_size       = 10000;
+        int max_muxing_queue_size       = 128;
         int muxing_queue_data_threshold = 50 * 1024 * 1024;
 
         opt_match_per_stream_int(ost, &o->max_muxing_queue_size, oc, st,
