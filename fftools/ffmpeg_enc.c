@@ -309,7 +309,7 @@ int enc_open(void *opaque, const AVFrame *frame)
                 return AVERROR(ENOMEM);
             memcpy(enc_ctx->subtitle_header, frame->subtitle_header->data,
                    frame->subtitle_header->size);
-            enc_ctx->subtitle_header_size = frame->subtitle_header->size;
+            enc_ctx->subtitle_header_size = strlen((char*)enc_ctx->subtitle_header);
         } else if (dec && dec->subtitle_header) {
             /* ASS code assumes this buffer is null terminated so add extra byte. */
             enc_ctx->subtitle_header = av_mallocz(dec->subtitle_header_size + 1);
@@ -317,7 +317,7 @@ int enc_open(void *opaque, const AVFrame *frame)
                 return AVERROR(ENOMEM);
             memcpy(enc_ctx->subtitle_header, dec->subtitle_header,
                    dec->subtitle_header_size);
-            enc_ctx->subtitle_header_size = dec->subtitle_header_size;
+            enc_ctx->subtitle_header_size = strlen((char*)enc_ctx->subtitle_header);
         }
 
         break;
