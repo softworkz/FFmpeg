@@ -1,7 +1,5 @@
 Files without standard license headers:
-ffdetect/detectutils.h
 ffdetect/device_lookup.c
-ffdetect/device_lookup.h
 ffdetect/ffdetect.c
 ffdetect/ffdetect_amf.c
 ffdetect/ffdetect_amf.h
@@ -24,6 +22,7 @@ libavdevice/riscv/cpu_common.c
 libavfilter/file_open.c
 libavfilter/log2_tab.c
 libavfilter/riscv/cpu_common.c
+libavfilter/supertonemap.c
 libavformat/cbs.c
 libavformat/cbs_apv.c
 libavformat/cbs_av1.c
