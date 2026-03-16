@@ -29,6 +29,9 @@ typedef struct DVBSubtitleContext {
     AVClass * class;
     int object_version;
     int min_bpp;
+    AVFrame *current_frame;
+    int have_frame;
+    int send_off_packet;
 } DVBSubtitleContext;
 
 #define PUTBITS2(val)\
@@ -535,7 +538,80 @@ static int dvbsub_encode(AVCodecContext* avctx, AVPacket* avpkt,
     avpkt->size = q - avpkt->data;
     *got_packet = 1;
 
+    avpkt->pts      = av_rescale_q(frame->subtitle_timing.start_pts, AV_TIME_BASE_Q, avctx->time_base);
+    avpkt->duration = av_rescale_q(frame->subtitle_timing.duration, AV_TIME_BASE_Q, avctx->time_base);
+    avpkt->dts = avpkt->pts;
+
     return 0;
+}
+
+static av_cold int dvbsub_init(AVCodecContext *avctx)
+{
+    DVBSubtitleContext *s = avctx->priv_data;
+    s->current_frame = av_frame_alloc();
+    if (!s->current_frame)
+        return AVERROR(ENOMEM);
+    return 0;
+}
+
+static av_cold int dvbsub_close(AVCodecContext *avctx)
+{
+    DVBSubtitleContext *s = avctx->priv_data;
+    av_frame_free(&s->current_frame);
+    return 0;
+}
+
+static int dvbsub_receive_packet(AVCodecContext *avctx, AVPacket *avpkt)
+{
+    DVBSubtitleContext *s = avctx->priv_data;
+    int ret, got_packet = 0;
+
+    if (!s->have_frame) {
+        s->send_off_packet = 0;
+        ret = ff_encode_get_frame(avctx, s->current_frame);
+        if (ret < 0) {
+            av_frame_unref(s->current_frame);
+            return ret;
+        }
+        s->have_frame = 1;
+    }
+
+    if (!s->send_off_packet) {
+        /* First packet: encode the normal display frame */
+        ret = dvbsub_encode(avctx, avpkt, s->current_frame, &got_packet);
+        if (ret < 0) {
+            av_frame_unref(s->current_frame);
+            s->have_frame = 0;
+            return ret;
+        }
+        s->send_off_packet = 1;
+        return 0;
+    } else {
+        /* Second packet: encode a clear (subtitle-off) frame with zero areas
+         * and pts shifted by the subtitle duration */
+        const unsigned save_num_areas = s->current_frame->num_subtitle_areas;
+        s->current_frame->num_subtitle_areas = 0;
+
+        ret = dvbsub_encode(avctx, avpkt, s->current_frame, &got_packet);
+
+        s->current_frame->num_subtitle_areas = save_num_areas;
+
+        if (ret < 0) {
+            av_frame_unref(s->current_frame);
+            s->have_frame = 0;
+            return ret;
+        }
+
+        /* Adjust pts: shift by subtitle duration to mark the clear time */
+        avpkt->pts += av_rescale_q(s->current_frame->subtitle_timing.duration,
+                                   AV_TIME_BASE_Q, avctx->time_base);
+        avpkt->duration = 0;
+        avpkt->dts = avpkt->pts;
+
+        av_frame_unref(s->current_frame);
+        s->have_frame = 0;
+        return 0;
+    }
 }
 
 #define OFFSET(x) offsetof(DVBSubtitleContext, x)
@@ -559,5 +635,7 @@ const FFCodec ff_dvbsub_encoder = {
     .p.id           = AV_CODEC_ID_DVB_SUBTITLE,
     .priv_data_size = sizeof(DVBSubtitleContext),
     .p.priv_class   = &dvbsubenc_class,
-    FF_CODEC_ENCODE_CB(dvbsub_encode),
+    .init           = dvbsub_init,
+    .close          = dvbsub_close,
+    FF_CODEC_RECEIVE_PACKET_CB(dvbsub_receive_packet),
 };

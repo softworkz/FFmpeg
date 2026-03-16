@@ -188,6 +188,14 @@ fail:
     return ret;
 }
 
+void set_subtitle_timestamps(AVFrame *frame)
+{
+    if (frame && frame->type == AVMEDIA_TYPE_SUBTITLE) {
+        frame->pts      = av_rescale_q(frame->subtitle_timing.start_pts, AV_TIME_BASE_Q, frame->time_base);
+        frame->duration = av_rescale_q(frame->subtitle_timing.duration, AV_TIME_BASE_Q, frame->time_base);
+    }
+}
+
 int avcodec_encode_subtitle(AVCodecContext *avctx, uint8_t *buf, int buf_size, const AVSubtitle *sub)
 {
     int ret = 0;
@@ -288,6 +296,8 @@ int ff_encode_encode_cb(AVCodecContext *avctx, AVPacket *avpkt,
 {
     const FFCodec *const codec = ffcodec(avctx->codec);
     int ret;
+
+    set_subtitle_timestamps(frame);
 
     ret = codec->cb.encode(avctx, avpkt, frame, got_packet);
     emms_c();
@@ -524,6 +534,8 @@ static int encode_send_frame_internal(AVCodecContext *avctx, const AVFrame *src)
     ret = av_frame_ref(dst, src);
     if (ret < 0)
         return ret;
+
+    set_subtitle_timestamps(dst);
 
 finish:
 
