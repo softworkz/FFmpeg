@@ -351,8 +351,8 @@ int avfilter_print_config_formats(AVBPrint *bp, const AVFilter *filter, int for_
                 av_bprintf(bp, "%s", av_get_pix_fmt_name(config->formats->formats[i]));
             else if (media_type == AVMEDIA_TYPE_AUDIO)
                 av_bprintf(bp, "%s", av_get_sample_fmt_name(config->formats->formats[i]));
-            ////else if (media_type == AVMEDIA_TYPE_SUBTITLE)
-            ////    av_bprintf(bp, "%s", av_get_subtitle_fmt_name(config->formats->formats[i]));
+            else if (media_type == AVMEDIA_TYPE_SUBTITLE)
+                av_bprintf(bp, "%s", av_get_subtitle_fmt_name(config->formats->formats[i]));
 
             if (i < config->formats->nb_formats - 1)
                 av_bprintf(bp, ", ");

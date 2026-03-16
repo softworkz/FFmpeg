@@ -1079,7 +1079,7 @@ int ff_default_query_formats(AVFilterContext *ctx)
     ret = ff_set_common_formats(ctx, formats);
     if (ret < 0)
         return ret;
-    if (type != AVMEDIA_TYPE_AUDIO) {
+    if (type != AVMEDIA_TYPE_AUDIO && type != AVMEDIA_TYPE_SUBTITLE) {
         ret = ff_set_common_all_color_spaces(ctx);
         if (ret < 0)
             return ret;
@@ -1087,7 +1087,7 @@ int ff_default_query_formats(AVFilterContext *ctx)
         if (ret < 0)
             return ret;
     }
-    if (type != AVMEDIA_TYPE_VIDEO) {
+    if (type != AVMEDIA_TYPE_VIDEO && type != AVMEDIA_TYPE_SUBTITLE) {
         ret = ff_set_common_all_channel_counts(ctx);
         if (ret < 0)
             return ret;

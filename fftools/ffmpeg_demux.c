@@ -582,6 +582,58 @@ static int do_send(Demuxer *d, DemuxStream *ds, AVPacket *pkt, unsigned flags,
     return 0;
 }
 
+static int send_subtitle_kickoff(Demuxer *d, const AVPacket *pkt)
+{
+    InputFile *f = &d->f;
+    int ret;
+
+    if (pkt->pts == AV_NOPTS_VALUE)
+        return 0;
+
+    if (f->streams[pkt->stream_index]->par->codec_type != AVMEDIA_TYPE_VIDEO)
+        return 0;
+
+    for (int i = 0; i < f->nb_streams; i++) {
+        InputStream *ist1 = f->streams[i];
+        DemuxStream *ds1  = ds_from_ist(ist1);
+        AVPacket *kickoff;
+
+        if (ist1->par->codec_type != AVMEDIA_TYPE_SUBTITLE)
+            continue;
+        if (!ist1->subtitle_kickoff.is_active)
+            continue;
+        if (ist1->subtitle_kickoff.last_pts != INT64_MIN)
+            continue;
+        if (ds1->finished || ds1->discard)
+            continue;
+        if (ds1->sch_idx_stream < 0)
+            continue;
+
+        kickoff = av_packet_alloc();
+        if (!kickoff)
+            return AVERROR(ENOMEM);
+
+        ret = av_new_packet(kickoff, 1);
+        if (ret < 0) {
+            av_packet_free(&kickoff);
+            return ret;
+        }
+
+        kickoff->data[0]  = 0;
+        kickoff->pts      = pkt->pts;
+        kickoff->dts      = pkt->pts;
+        kickoff->time_base = pkt->time_base;
+        kickoff->opaque   = (void*)(intptr_t)PKT_OPAQUE_SUBTITLE_KICKOFF;
+
+        ret = do_send(d, ds1, kickoff, 0, "subtitle kickoff");
+        av_packet_free(&kickoff);
+        if (ret < 0)
+            return ret;
+    }
+
+    return 0;
+}
+
 static int demux_send(Demuxer *d, DemuxThreadContext *dt, DemuxStream *ds,
                       AVPacket *pkt, unsigned flags)
 {
@@ -591,22 +643,10 @@ static int demux_send(Demuxer *d, DemuxThreadContext *dt, DemuxStream *ds,
     // pkt can be NULL only when flushing BSFs
     av_assert0(ds->bsf || pkt);
 
-    // send heartbeat for sub2video streams
-    if (d->pkt_heartbeat && pkt && pkt->pts != AV_NOPTS_VALUE) {
-        for (int i = 0; i < f->nb_streams; i++) {
-            DemuxStream *ds1 = ds_from_ist(f->streams[i]);
-
-            if (ds1->finished || !ds1->have_sub2video)
-                continue;
-
-            d->pkt_heartbeat->pts          = pkt->pts;
-            d->pkt_heartbeat->time_base    = pkt->time_base;
-            d->pkt_heartbeat->opaque       = (void*)(intptr_t)PKT_OPAQUE_SUB_HEARTBEAT;
-
-            ret = do_send(d, ds1, d->pkt_heartbeat, 0, "heartbeat");
-            if (ret < 0)
-                return ret;
-        }
+    if (pkt) {
+        ret = send_subtitle_kickoff(d, pkt);
+        if (ret < 0)
+            return ret;
     }
 
     if (ds->bsf) {
@@ -1032,6 +1072,8 @@ static void ist_free(InputStream **pist)
 
     av_bsf_free(&ds->bsf);
 
+    av_buffer_unref(&ist->subtitle_header);
+
     av_freep(pist);
 }
 
@@ -1053,8 +1095,6 @@ void ifile_close(InputFile **pf)
     av_freep(&f->streams);
 
     avformat_close_input(&f->ctx);
-
-    av_packet_free(&d->pkt_heartbeat);
 
     av_freep(pf);
 }
@@ -1107,13 +1147,20 @@ int ist_use(InputStream *ist, int decoding_needed,
         if (use_wallclock_as_timestamps)
             is_unreliable = 0;
 
-        ds->dec_opts.flags |= (!!ist->fix_sub_duration * DECODER_FLAG_FIX_SUB_DURATION) |
-                              (!!is_unreliable * DECODER_FLAG_TS_UNRELIABLE) |
-                              (!!(d->loop && is_audio) * DECODER_FLAG_SEND_END_TS)
+////        ds->dec_opts.flags |= (!!ist->fix_sub_duration * DECODER_FLAG_FIX_SUB_DURATION) |
+////                              (!!is_unreliable * DECODER_FLAG_TS_UNRELIABLE) |
+////                              (!!(d->loop && is_audio) * DECODER_FLAG_SEND_END_TS)
+////#if FFMPEG_OPT_TOP
+////                              | ((ist->top_field_first >= 0) * DECODER_FLAG_TOP_FIELD_FIRST)
+////#endif
+////                             ;
+
+        ds->dec_opts.flags |= (!!is_unreliable * DECODER_FLAG_TS_UNRELIABLE) |
+            (!!(d->loop && is_audio) * DECODER_FLAG_SEND_END_TS)
 #if FFMPEG_OPT_TOP
-                              | ((ist->top_field_first >= 0) * DECODER_FLAG_TOP_FIELD_FIRST)
+            | ((ist->top_field_first >= 0) * DECODER_FLAG_TOP_FIELD_FIRST)
 #endif
-                             ;
+            ;
 
         if (ist->framerate.num) {
             ds->dec_opts.flags     |= DECODER_FLAG_FRAMERATE_FORCED;
@@ -1147,6 +1194,7 @@ int ist_use(InputStream *ist, int decoding_needed,
         if (ret < 0)
             return ret;
         ds->sch_idx_dec = ret;
+        ist->decoder->subtitle_kickoff = &ist->subtitle_kickoff;
 
         ret = sch_connect(d->sch, SCH_DSTREAM(d->f.index, ds->sch_idx_stream),
                                   SCH_DEC_IN(ds->sch_idx_dec));
@@ -1162,7 +1210,7 @@ int ist_use(InputStream *ist, int decoding_needed,
             return ret;
     } else {
         *src = decoding_needed                             ?
-               SCH_DEC_OUT(ds->sch_idx_dec, 0)             :
+               (SchedulerNode){ .type = SCH_NODE_TYPE_DEC, .idx = ds->sch_idx_dec, .idx_stream = 0 }             :
                SCH_DSTREAM(d->f.index, ds->sch_idx_stream);
     }
 
@@ -1684,6 +1732,9 @@ static int ist_add(const OptionsContext *o, Demuxer *d, AVStream *st, AVDictiona
                 return ret;
             }
         }
+
+        ist->subtitle_kickoff.is_active = 1;
+        ist->subtitle_kickoff.last_pts  = INT64_MIN;
         break;
     }
     case AVMEDIA_TYPE_ATTACHMENT:

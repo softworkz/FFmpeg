@@ -458,8 +458,14 @@ static int ost_get_filters(const OptionsContext *o, AVFormatContext *oc,
 #endif
     if (filters)
         *dst = av_strdup(filters);
-    else
-        *dst = av_strdup(ost->type == AVMEDIA_TYPE_VIDEO ? "null" : "anull");
+    else {
+        switch (ost->type) {
+        case AVMEDIA_TYPE_VIDEO:    *dst = av_strdup("null");  break;
+        case AVMEDIA_TYPE_AUDIO:    *dst = av_strdup("anull"); break;
+        case AVMEDIA_TYPE_SUBTITLE: *dst = av_strdup("snull"); break;
+        default: av_assert0(0); return AVERROR_BUG;
+        }
+    }
     return *dst ? 0 : AVERROR(ENOMEM);
 }
 
@@ -857,6 +863,17 @@ static int new_stream_audio(Muxer *mux, const OptionsContext *o,
     return 0;
 }
 
+static enum AVSubtitleType get_subtitle_format(const AVCodecDescriptor *codec_descriptor)
+{
+    if (codec_descriptor->props & AV_CODEC_PROP_BITMAP_SUB)
+        return AV_SUBTITLE_FMT_BITMAP;
+
+    if (codec_descriptor->props & AV_CODEC_PROP_TEXT_SUB)
+        return AV_SUBTITLE_FMT_ASS;
+
+    return AV_SUBTITLE_FMT_UNKNOWN;
+}
+
 static int new_stream_subtitle(Muxer *mux, const OptionsContext *o,
                                OutputStream *ost)
 {
@@ -868,10 +885,9 @@ static int new_stream_subtitle(Muxer *mux, const OptionsContext *o,
         AVCodecContext *subtitle_enc = ost->enc->enc_ctx;
 
         AVCodecDescriptor const *input_descriptor =
-            avcodec_descriptor_get(ost->ist->par->codec_id);
+            ost->ist ? avcodec_descriptor_get(ost->ist->par->codec_id) : NULL;
         AVCodecDescriptor const *output_descriptor =
             avcodec_descriptor_get(subtitle_enc->codec_id);
-        int input_props = 0, output_props = 0;
 
         const char *frame_size = NULL;
 
@@ -883,15 +899,18 @@ static int new_stream_subtitle(Muxer *mux, const OptionsContext *o,
                 return ret;
             }
         }
-        if (input_descriptor)
-            input_props = input_descriptor->props & (AV_CODEC_PROP_TEXT_SUB | AV_CODEC_PROP_BITMAP_SUB);
-        if (output_descriptor)
-            output_props = output_descriptor->props & (AV_CODEC_PROP_TEXT_SUB | AV_CODEC_PROP_BITMAP_SUB);
-        if (input_props && output_props && input_props != output_props) {
-            av_log(ost, AV_LOG_ERROR,
-                   "Subtitle encoding currently only possible from text to text "
-                   "or bitmap to bitmap\n");
-            return AVERROR(EINVAL);
+
+        if (ost->ist && ost->ist->dec->type == AVMEDIA_TYPE_SUBTITLE && input_descriptor && output_descriptor) {
+            const enum AVSubtitleType in_subtitle_format  = get_subtitle_format(input_descriptor);
+            const enum AVSubtitleType out_subtitle_format = get_subtitle_format(output_descriptor);
+
+            if (ost->ist->nb_filters == 0 && in_subtitle_format != AV_SUBTITLE_FMT_UNKNOWN && out_subtitle_format != AV_SUBTITLE_FMT_UNKNOWN
+                && in_subtitle_format != out_subtitle_format) {
+                av_log(ost, AV_LOG_ERROR,
+                       "Subtitle encoding without conversion filters is only possible "
+                       "from text to text or bitmap to bitmap\n");
+                return AVERROR(EINVAL);
+            }
         }
     }
 
@@ -915,8 +934,9 @@ ost_bind_filter(const Muxer *mux, MuxStream *ms, OutputFilter *ofilter,
     OutputFilterOptions opts = {
         .enc              = enc_ctx->codec,
         .name             = name,
-        .format           = (ost->type == AVMEDIA_TYPE_VIDEO) ?
-                            enc_ctx->pix_fmt : enc_ctx->sample_fmt,
+        .format           = (ost->type == AVMEDIA_TYPE_VIDEO)    ? enc_ctx->pix_fmt :
+                            (ost->type == AVMEDIA_TYPE_SUBTITLE) ? enc_ctx->subtitle_type :
+                                                                   enc_ctx->sample_fmt,
         .width            = enc_ctx->width,
         .height           = enc_ctx->height,
         .color_space      = enc_ctx->colorspace,
@@ -968,7 +988,7 @@ ost_bind_filter(const Muxer *mux, MuxStream *ms, OutputFilter *ofilter,
                                            (const void **) &opts.color_ranges, NULL);
         if (ret < 0)
             return ret;
-    } else {
+    } else if (ost->type == AVMEDIA_TYPE_AUDIO) {
         ret = avcodec_get_supported_config(enc_ctx, NULL,
                                            AV_CODEC_CONFIG_SAMPLE_FORMAT, 0,
                                            (const void **) &opts.formats, NULL);
@@ -1260,8 +1280,9 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
     }
 
     if (enc) {
-        ret = sch_add_enc(mux->sch, encoder_thread, ost,
-                          ost->type == AVMEDIA_TYPE_SUBTITLE ? NULL : enc_open);
+        ////ret = sch_add_enc(mux->sch, encoder_thread, ost,
+        ////                  ost->type == AVMEDIA_TYPE_SUBTITLE ? NULL : enc_open);
+        ret = sch_add_enc(mux->sch, encoder_thread, ost, enc_open);
         if (ret < 0)
             return ret;
         ms->sch_idx_enc = ret;
@@ -1536,7 +1557,8 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
         goto fail;
 
     if (ost->enc &&
-        (type == AVMEDIA_TYPE_VIDEO || type == AVMEDIA_TYPE_AUDIO)) {
+        (type == AVMEDIA_TYPE_VIDEO || type == AVMEDIA_TYPE_AUDIO ||
+         type == AVMEDIA_TYPE_SUBTITLE)) {
         ret = ost_bind_filter(mux, ms, ofilter, o, enc_tb, vsync_method,
                               keep_pix_fmt, autoscale, threads_manual, vs, &src);
         if (ret < 0)

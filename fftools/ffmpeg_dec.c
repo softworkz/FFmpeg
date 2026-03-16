@@ -84,6 +84,8 @@ typedef struct DecoderPriv {
     // user specified decoder multiview options manually
     int                 multiview_user_config;
 
+    int                 fix_sub_duration;
+
     struct {
         ViewSpecifier   vs;
         unsigned        out_idx;
@@ -102,6 +104,12 @@ typedef struct DecoderPriv {
         AVDictionary       *opts;
         const AVCodec      *codec;
     } standalone_init;
+
+    struct { /* previous decoded subtitle and related variables */
+        int got_output;
+        int ret;
+        AVFrame *subtitle;
+    } prev_sub;
 } DecoderPriv;
 
 static DecoderPriv *dp_from_dec(Decoder *d)
@@ -636,25 +644,86 @@ static int process_subtitle(DecoderPriv *dp, AVFrame *frame)
 ////    return process_subtitle(dp, dp->sub_heartbeat);
 ////}
 
-
-static int transcode_subtitles(DecoderPriv *dp, const AVPacket *pkt,
-                               AVFrame *frame)
+static int decode_subtitles_decode(AVCodecContext *avctx, AVFrame *frame, int *got_frame, const AVPacket *pkt)
 {
-    AVPacket *flush_pkt = NULL;
-    AVSubtitle subtitle;
-    int got_output;
     int ret;
 
-    if (pkt && (intptr_t)pkt->opaque == PKT_OPAQUE_SUB_HEARTBEAT) {
-        frame->pts       = pkt->pts;
+    *got_frame = 0;
+
+    if (pkt) {
+        ret = avcodec_send_packet(avctx, pkt);
+        // In particular, we don't expect AVERROR(EAGAIN), because we read all
+        // decoded frames with avcodec_receive_frame() until done.
+        if (ret < 0 && ret != AVERROR_EOF)
+            return ret;
+    }
+
+    ret = avcodec_receive_frame(avctx, frame);
+    if (ret < 0 && ret != AVERROR(EAGAIN))
+        return ret;
+    if (ret >= 0)
+        *got_frame = 1;
+
+    return 0;
+}
+
+static int decode_subtitles(DecoderPriv *dp, const AVPacket *pkt, AVFrame *frame)
+{
+    AVCodecContext *ctx = dp->dec_ctx;
+    AVPacket *flush_pkt = NULL;
+    int got_output = 0;
+    int ret;
+
+    if (pkt && (intptr_t)pkt->opaque == PKT_OPAQUE_SUBTITLE_KICKOFF) {
+        frame->type = AVMEDIA_TYPE_SUBTITLE;
+        frame->format = (uint16_t)ctx->subtitle_type;
+        frame->pts = pkt->pts;
+        frame->pkt_dts = pkt->dts;
+        frame->best_effort_timestamp = pkt->pts;
         frame->time_base = pkt->time_base;
-        frame->opaque    = (void*)(intptr_t)FRAME_OPAQUE_SUB_HEARTBEAT;
+        frame->width  = ctx->width;
+        frame->height = ctx->height;
+        frame->subtitle_timing.start_pts = av_rescale_q(pkt->pts, pkt->time_base, AV_TIME_BASE_Q);
+        frame->subtitle_timing.duration  = 1;
+
+        ret = av_frame_get_buffer2(frame, 0);
+        if (ret < 0)
+            return ret;
+
+        dp->dec.subtitle_kickoff->last_pts = frame->pts;
 
         ret = sch_dec_send(dp->sch, dp->sch_idx, 0, frame);
+        if (ret < 0)
+            av_frame_unref(frame);
+
         return ret == AVERROR_EOF ? AVERROR_EXIT : ret;
-    } else if (pkt && (intptr_t)pkt->opaque == PKT_OPAQUE_FIX_SUB_DURATION) {
-        return fix_sub_duration_heartbeat(dp, av_rescale_q(pkt->pts, pkt->time_base,
-                                                           AV_TIME_BASE_Q));
+    }
+
+    ////if (pkt && (intptr_t)pkt->opaque == PKT_OPAQUE_SUB_HEARTBEAT) {
+    ////    frame->pts       = pkt->pts;
+    ////    frame->time_base = pkt->time_base;
+    ////    frame->opaque    = (void*)(intptr_t)FRAME_OPAQUE_SUB_HEARTBEAT;
+
+    ////    ret = sch_dec_send(dp->sch, dp->sch_idx, 0, frame);
+    ////    return ret == AVERROR_EOF ? AVERROR_EXIT : ret;
+    ////} else if (pkt && (intptr_t)pkt->opaque == PKT_OPAQUE_FIX_SUB_DURATION) {
+    ////    return fix_sub_duration_heartbeat(dp, av_rescale_q(pkt->pts, pkt->time_base,
+    ////                                                       AV_TIME_BASE_Q));
+    ////}
+
+    frame->type = AVMEDIA_TYPE_SUBTITLE;
+    frame->format = (uint16_t)ctx->subtitle_type;
+
+    if (!ctx->ass_header && ctx->subtitle_header && ctx->subtitle_header_size > 0) {
+        char *subtitle_header =  av_strdup((char*)ctx->subtitle_header);
+        if (!subtitle_header)
+            return AVERROR(ENOMEM);
+
+        ctx->ass_header = av_buffer_create((uint8_t*)subtitle_header, strlen(subtitle_header) + 1, NULL, NULL, 0);
+        if (!ctx->ass_header) {
+            av_free(subtitle_header);
+            return AVERROR(ENOMEM);
+        }
     }
 
     if (!pkt) {
@@ -663,36 +732,77 @@ static int transcode_subtitles(DecoderPriv *dp, const AVPacket *pkt,
             return AVERROR(ENOMEM);
     }
 
-    ret = avcodec_decode_subtitle2(dp->dec_ctx, &subtitle, &got_output,
-                                   pkt ? pkt : flush_pkt);
+    ////ret = avcodec_decode_subtitle2(ctx, &subtitle, &got_output, pkt ? pkt : flush_pkt);
+
+    ret = decode_subtitles_decode(ctx, frame, &got_output, pkt ? pkt : flush_pkt);
+
     av_packet_free(&flush_pkt);
 
-    if (ret < 0) {
-        av_log(dp, AV_LOG_ERROR, "Error decoding subtitles: %s\n",
-               av_err2str(ret));
-        dp->dec.decode_errors++;
-        return exit_on_error ? ret : 0;
-    }
+    ////if (ret < 0) {
+    ////    av_log(dp, AV_LOG_ERROR, "Error decoding subtitles: %s\n", av_err2str(ret));
+    ////    dp->dec.decode_errors++;
+    ////    return exit_on_error ? ret : 0;
+    ////}
+
+    ////if (ret != AVERROR_EOF)
+    ////    check_decode_result(NULL, got_output, ret);
+
 
     if (!got_output)
         return pkt ? 0 : AVERROR_EOF;
 
-    dp->dec.frames_decoded++;
+    if (dp->fix_sub_duration) {
+        int64_t end = 1;
+        if (dp->prev_sub.got_output && dp->prev_sub.subtitle) {
 
-    // XXX the queue for transferring data to consumers runs
-    // on AVFrames, so we wrap AVSubtitle in an AVBufferRef and put that
-    // inside the frame
-    // eventually, subtitles should be switched to use AVFrames natively
-    ret = subtitle_wrap_frame(frame, &subtitle, 0);
-    if (ret < 0) {
-        avsubtitle_free(&subtitle);
-        return ret;
+            const int64_t duration = dp->prev_sub.subtitle->subtitle_timing.duration;
+            end = frame->subtitle_timing.start_pts - dp->prev_sub.subtitle->subtitle_timing.start_pts;
+
+            if (end < duration) {
+                av_log(ctx, AV_LOG_DEBUG, "Subtitle duration reduced from %"PRId64" to %"PRId64"%s\n",
+                    duration, end, end <= 0 ? ", dropping it" : "");
+                dp->prev_sub.subtitle->subtitle_timing.duration = end;
+            }
+        }
+        FFSWAP(int,        got_output,        dp->prev_sub.got_output);
+        FFSWAP(int,        ret,                dp->prev_sub.ret);
+        FFSWAP(AVFrame*,   frame, dp->prev_sub.subtitle);
+        frame = dp->frame;
+        if (end <= 0)
+            return (int)end;
     }
 
-    frame->width  = dp->dec_ctx->width;
-    frame->height = dp->dec_ctx->height;
+    if (!got_output || !frame)
+        return ret;
 
-    return process_subtitle(dp, frame);
+    frame->type = AVMEDIA_TYPE_SUBTITLE;
+
+    if (frame->format == AV_SUBTITLE_FMT_UNKNOWN)
+        frame->format = (uint16_t)ctx->subtitle_type;
+
+    if ((ret = av_buffer_replace(&frame->subtitle_header, ctx->ass_header)) < 0)
+        return ret;
+
+    int64_t pts = av_rescale_q(frame->subtitle_timing.start_pts, AV_TIME_BASE_Q, ctx->pkt_timebase);
+    if (dp->dec.subtitle_kickoff->last_pts > 0 && pts <= dp->dec.subtitle_kickoff->last_pts)
+        pts = dp->dec.subtitle_kickoff->last_pts + 1;
+
+    dp->dec.subtitle_kickoff->last_pts = frame->pts = pts;
+
+    dp->dec.frames_decoded++;
+
+    frame->width  = ctx->width;
+    frame->height = ctx->height;
+    frame->format = ctx->subtitle_type;
+
+    av_log(ctx, AV_LOG_DEBUG, "decode_subtitles: pts: %"PRId64"  frame->pts: %"PRId64" duration: %"PRId64" size: %dx%d type: %d\n",
+           frame->subtitle_timing.start_pts, frame->pts, frame->subtitle_timing.duration, ctx->width, ctx->height,  ctx->subtitle_type);
+
+    ret = sch_dec_send(dp->sch, dp->sch_idx, 0, frame);
+    if (ret < 0)
+        av_frame_unref(frame);
+
+    return ret == AVERROR_EOF ? AVERROR_EXIT : ret;
 }
 
 static int packet_decode(DecoderPriv *dp, AVPacket *pkt, AVFrame *frame)
@@ -702,7 +812,7 @@ static int packet_decode(DecoderPriv *dp, AVPacket *pkt, AVFrame *frame)
     int ret;
 
     if (dec->codec_type == AVMEDIA_TYPE_SUBTITLE)
-        return transcode_subtitles(dp, pkt, frame);
+        return decode_subtitles(dp, pkt, frame);
 
     // With fate-indeo3-2, we're getting 0-sized packets before EOF for some
     // reason. This seems like a semi-critical bug. Don't trigger EOF, and
@@ -792,7 +902,7 @@ static int packet_decode(DecoderPriv *dp, AVPacket *pkt, AVFrame *frame)
             dp->dec.samples_decoded += frame->nb_samples;
 
             audio_ts_process(dp, frame);
-        } else {
+        } else if (dec->codec_type == AVMEDIA_TYPE_VIDEO) {
             ret = video_frame_process(dp, frame, &outputs_mask);
             if (ret < 0) {
                 av_log(dp, AV_LOG_FATAL,
@@ -926,9 +1036,9 @@ static int decoder_thread(void *arg)
 
         input_status  = sch_dec_receive(dp->sch, dp->sch_idx, dt.pkt);
         have_data     = input_status >= 0 &&
-            (dt.pkt->buf || dt.pkt->side_data_elems ||
-             (intptr_t)dt.pkt->opaque == PKT_OPAQUE_SUB_HEARTBEAT ||
-             (intptr_t)dt.pkt->opaque == PKT_OPAQUE_FIX_SUB_DURATION);
+            (dt.pkt->buf || dt.pkt->side_data_elems);
+             ////(intptr_t)dt.pkt->opaque == PKT_OPAQUE_SUB_HEARTBEAT ||
+             ////(intptr_t)dt.pkt->opaque == PKT_OPAQUE_FIX_SUB_DURATION);
         flush_buffers = input_status >= 0 && !have_data;
         if (!have_data)
             av_log(dp, AV_LOG_VERBOSE, "Decoder thread received %s packet\n",
@@ -1312,6 +1422,15 @@ static void multiview_check_manual(DecoderPriv *dp, const AVDictionary *dec_opts
     }
 }
 
+static void check_options(DecoderPriv *dp, const AVDictionary *dec_opts)
+{
+    AVDictionaryEntry *dict_entry = av_dict_get(dec_opts, "fix_sub_duration", NULL, 0);
+
+    if (dict_entry) {
+        dp->fix_sub_duration = !!dict_entry->value;
+    }
+}
+
 static enum AVPixelFormat get_format(AVCodecContext *s, const enum AVPixelFormat *pix_fmts)
 {
     DecoderPriv  *dp = s->opaque;
@@ -1663,6 +1782,7 @@ int dec_init(Decoder **pdec, Scheduler *sch,
         return ret;
 
     multiview_check_manual(dp, *dec_opts);
+    check_options(dp, *dec_opts);
 
     ret = dec_open(dp, dec_opts, o, param_out);
     if (ret < 0)
@@ -1737,6 +1857,7 @@ int dec_create(const OptionsContext *o, const char *arg, Scheduler *sch)
         return ret;
 
     multiview_check_manual(dp, dp->standalone_init.opts);
+    check_options(dp, dp->standalone_init.opts);
 
     if (o->codec_names.nb_opt) {
         const char *name = o->codec_names.opt[o->codec_names.nb_opt - 1].u.str;

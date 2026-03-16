@@ -457,6 +457,10 @@ static void print_formats(void *log_ctx, int level, enum AVMediaType type,
         for (unsigned i = 0; i < formats->nb_formats; i++)
             av_bprintf(&bp, "%s%s", bp.len ? " " : "", av_get_sample_fmt_name(formats->formats[i]));
         break;
+    case AVMEDIA_TYPE_SUBTITLE:
+        for (unsigned i = 0; i < formats->nb_formats; i++)
+            av_bprintf(&bp, "%s%s", bp.len ? " " : "", av_get_subtitle_fmt_name(formats->formats[i]));
+        break;
     default:
         av_bprintf(&bp, "(unknown)");
         break;

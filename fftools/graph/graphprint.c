@@ -289,7 +289,7 @@ static void print_link(GraphPrintContext *gpc, AVFilterLink *link)
         break;
 
     case AVMEDIA_TYPE_SUBTITLE:
-        ////print_str("format", av_x_if_null(av_get_subtitle_fmt_name(link->format), "?"));
+        print_str("format", av_x_if_null(av_get_subtitle_fmt_name(link->format), "?"));
 
         if (link->w && link->h) {
             if (tfc->show_value_unit) {

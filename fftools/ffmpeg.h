@@ -63,6 +63,8 @@
 
 #define FFMPEG_ERROR_RATE_EXCEEDED FFERRTAG('E', 'R', 'E', 'D')
 
+struct subtitle_kickoff;
+
 enum VideoSyncMethod {
     VSYNC_AUTO = -1,
     VSYNC_PASSTHROUGH,
@@ -86,8 +88,8 @@ enum HWAccelID {
 };
 
 enum FrameOpaque {
-    FRAME_OPAQUE_SUB_HEARTBEAT = 1,
-    FRAME_OPAQUE_EOF,
+    PKT_OPAQUE_SUBTITLE_KICKOFF = 1,
+    FRAME_OPAQUE_EOF = 2,
     FRAME_OPAQUE_SEND_COMMAND,
 };
 
@@ -452,6 +454,7 @@ typedef struct Decoder {
     const uint8_t   *subtitle_header;
     int              subtitle_header_size;
 
+    struct subtitle_kickoff *subtitle_kickoff;
     // number of frames/samples retrieved from the decoder
     uint64_t         frames_decoded;
     uint64_t         samples_decoded;
@@ -485,6 +488,14 @@ typedef struct InputStream {
 #endif
 
     int                   fix_sub_duration;
+
+    struct subtitle_kickoff {
+        int is_active;
+        int64_t last_pts;
+        int w, h;
+    } subtitle_kickoff;
+
+    AVBufferRef *subtitle_header;
 
     /* decoded data from this stream goes into all those filters
      * currently video and audio only */
@@ -662,6 +673,9 @@ typedef struct OutputStream {
      * subtitles utilizing fix_sub_duration at random access points.
      */
     unsigned int fix_sub_duration_heartbeat;
+
+    /* subtitle_pts values of the last subtitle frame having arrived for encoding */
+    int64_t last_subtitle_pts;
 } OutputStream;
 
 typedef struct OutputFile {

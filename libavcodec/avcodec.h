@@ -1738,6 +1738,7 @@ typedef struct AVCodecContext {
      */
     int subtitle_header_size;
     uint8_t *subtitle_header;
+    AVBufferRef *ass_header;
 
     /**
      * dump format separator.
