@@ -188,7 +188,7 @@ fail:
     return ret;
 }
 
-void set_subtitle_timestamps(AVFrame *frame)
+static void set_subtitle_timestamps(AVFrame *frame)
 {
     if (frame && frame->type == AVMEDIA_TYPE_SUBTITLE) {
         frame->pts      = av_rescale_q(frame->subtitle_timing.start_pts, AV_TIME_BASE_Q, frame->time_base);
