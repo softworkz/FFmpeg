@@ -190,4 +190,20 @@ int ff_alloc_timecode_sei(const AVFrame *frame, AVRational rate, size_t prefix_l
  */
 int64_t ff_guess_coded_bitrate(AVCodecContext *avctx);
 
+/**
+ * Copies subtitle data from AVSubtitle to AVFrame.
+ *
+ * @deprecated This is a compatibility method for interoperability with
+ * the legacy subtitle API.
+ */
+int ff_frame_put_subtitle(AVFrame* frame, const AVSubtitle* sub);
+
+/**
+ * Copies subtitle data from AVFrame to AVSubtitle.
+ *
+ * @deprecated This is a compatibility method for interoperability with
+ * the legacy subtitle API.
+ */
+int ff_frame_get_subtitle(AVSubtitle* sub, AVFrame* frame);
+
 #endif /* AVCODEC_INTERNAL_H */

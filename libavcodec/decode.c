@@ -57,6 +57,8 @@
 #include "thread.h"
 #include "threadprogress.h"
 
+#   define emms_c() do {} while(0)
+
 typedef struct DecodeContext {
     AVCodecInternal avci;
 
@@ -401,6 +403,8 @@ static int discard_samples(AVCodecContext *avctx, AVFrame *frame, int64_t *disca
     return 0;
 }
 
+static int decode_subtitle_shim(AVCodecContext *avctx, AVFrame *frame, int *got_frame, AVPacket *avpkt);
+
 /*
  * The core of the receive_frame_wrapper for the decoders implementing
  * the simple API. Certain decoders might consume partial packets without
@@ -436,7 +440,11 @@ static inline int decode_simple_internal(AVCodecContext *avctx, AVFrame *frame, 
 
     frame->pict_type = dc->initial_pict_type;
     frame->flags    |= dc->intra_only_flag;
-    consumed = codec->cb.decode(avctx, frame, &got_frame, pkt);
+
+    if (codec->cb_type == FF_CODEC_CB_TYPE_DECODE_SUB)
+        consumed = decode_subtitle_shim(avctx, frame, &got_frame, pkt);
+    else
+        consumed = codec->cb.decode(avctx, frame, &got_frame, pkt);
 
     if (!(codec->caps_internal & FF_CODEC_CAP_SETS_PKT_DTS))
         frame->pkt_dts = pkt->dts;
@@ -449,6 +457,9 @@ static inline int decode_simple_internal(AVCodecContext *avctx, AVFrame *frame, 
     } else if (avctx->codec->type == AVMEDIA_TYPE_AUDIO) {
         ret =  !got_frame ? AVERROR(EAGAIN)
                           : discard_samples(avctx, frame, discarded_samples);
+    } else if (avctx->codec->type == AVMEDIA_TYPE_SUBTITLE) {
+        ret =  !got_frame ? AVERROR(EAGAIN)
+                          : 0;
     } else
         av_assert0(0);
 
@@ -698,6 +709,43 @@ static int decode_receive_frame_internal(AVCodecContext *avctx, AVFrame *frame)
     return ret;
 }
 
+static int decode_subtitle2_priv(AVCodecContext *avctx, AVSubtitle *sub,
+                                 int *got_sub_ptr, const AVPacket *avpkt);
+
+static int decode_subtitle_shim(AVCodecContext *avctx, AVFrame *frame, int *got_frame, AVPacket *avpkt)
+{
+    int ret;
+    AVSubtitle subtitle = { 0 };
+
+    if (frame->buf[0])
+        return AVERROR(EAGAIN);
+
+    ////if (!avpkt)
+    ////    return AVERROR_EOF;
+
+    av_frame_unref(frame);
+
+    ret = decode_subtitle2_priv(avctx, &subtitle, got_frame, avpkt);
+
+    if (ret >= 0 && *got_frame) {
+        frame->type = AVMEDIA_TYPE_SUBTITLE;
+        frame->format = subtitle.format;
+        ret = av_frame_get_buffer2(frame, 0);
+
+        if (ret >= 0)
+            ret = ff_frame_put_subtitle(frame, &subtitle);
+
+        frame->width = avctx->width;
+        frame->height = avctx->height;
+        frame->pkt_dts = avpkt->dts;
+        frame->time_base = avctx->pkt_timebase;
+    }
+
+    avsubtitle_free(&subtitle);
+
+    return avpkt->size;
+}
+
 int attribute_align_arg avcodec_send_packet(AVCodecContext *avctx, const AVPacket *avpkt)
 {
     AVCodecInternal *avci = avctx->internal;
@@ -713,6 +761,14 @@ int attribute_align_arg avcodec_send_packet(AVCodecContext *avctx, const AVPacke
     if (avpkt && !avpkt->size && avpkt->data)
         return AVERROR(EINVAL);
 
+  ////  if (avctx->codec_type == AVMEDIA_TYPE_SUBTITLE)
+		////// this does not exactly implement the avcodec_send_packet/avcodec_receive_frame API
+	 ////   // but we know that no subtitle decoder produces multiple AVSubtitles per packet through
+		////// the legacy API, and this will be changed when migrating the subtitle decoders
+		////// to the frame based decoding api
+  ////      return decode_subtitle_shim(avctx, avci->buffer_frame, avpkt);
+
+    av_packet_unref(avci->buffer_pkt);
     if (avpkt && (avpkt->data || avpkt->side_data_elems)) {
         if (!AVPACKET_IS_EMPTY(avci->buffer_pkt))
             return AVERROR(EAGAIN);
@@ -775,6 +831,11 @@ static int frame_validate(AVCodecContext *avctx, AVFrame *frame)
             goto fail;
 
         break;
+    case AVMEDIA_TYPE_SUBTITLE:
+        if (frame->type != AVMEDIA_TYPE_SUBTITLE)
+            goto fail;
+
+        break;
     default: av_assert0(0);
     }
 
@@ -792,6 +853,8 @@ int ff_decode_receive_frame(AVCodecContext *avctx, AVFrame *frame)
 
     if (avci->buffer_frame->buf[0]) {
         av_frame_move_ref(frame, avci->buffer_frame);
+        ////} else if (avctx->codec_type == AVMEDIA_TYPE_SUBTITLE)
+        ////    return AVERROR(EAGAIN);
     } else {
         ret = decode_receive_frame_internal(avctx, frame);
         if (ret < 0)
@@ -903,7 +966,7 @@ static int utf8_check(const uint8_t *str)
     return 1;
 }
 
-int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub,
+static int decode_subtitle2_priv(AVCodecContext *avctx, AVSubtitle *sub,
                              int *got_sub_ptr, const AVPacket *avpkt)
 {
     int ret = 0;
@@ -950,10 +1013,7 @@ int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub,
                                                  avctx->pkt_timebase, ms);
         }
 
-        if (avctx->codec_descriptor->props & AV_CODEC_PROP_BITMAP_SUB)
-            sub->format = 0;
-        else if (avctx->codec_descriptor->props & AV_CODEC_PROP_TEXT_SUB)
-            sub->format = 1;
+        sub->format = (uint16_t)avctx->subtitle_type;
 
         for (unsigned i = 0; i < sub->num_rects; i++) {
             if (avctx->sub_charenc_mode != FF_SUB_CHARENC_MODE_IGNORE &&
@@ -972,6 +1032,11 @@ int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub,
     }
 
     return ret;
+}
+
+int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub, int *got_sub_ptr, const AVPacket *avpkt)
+{
+    return decode_subtitle2_priv(avctx, sub, got_sub_ptr, avpkt);
 }
 
 enum AVPixelFormat avcodec_default_get_format(struct AVCodecContext *avctx,
