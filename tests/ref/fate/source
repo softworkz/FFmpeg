@@ -22,7 +22,6 @@ libavdevice/riscv/cpu_common.c
 libavfilter/file_open.c
 libavfilter/log2_tab.c
 libavfilter/riscv/cpu_common.c
-libavfilter/supertonemap.c
 libavformat/cbs.c
 libavformat/cbs_apv.c
 libavformat/cbs_av1.c
@@ -42,6 +41,7 @@ compat/float/float.h
 compat/float/limits.h
 compat/stdbit/stdbit.h
 libavcodec/bitstream_template.h
+libavfilter/supertonemap.c
 tools/decode_simple.h
 Use of av_clip() where av_clip_uintp2() could be used:
 Use of av_clip() where av_clip_intp2() could be used:
