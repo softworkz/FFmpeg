@@ -67,7 +67,7 @@ char *avpriv_ass_get_subtitle_header_full(AVCodecContext *avctx,
              "0,0,"                 /* Spacing, Angle */
              "%d,1,0,"              /* BorderStyle, Outline, Shadow */
              "%d,10,10,10,"         /* Alignment, Margin[LRV] */
-             "0\n"                  /* Encoding */
+             "1\n"                  /* Encoding */
 
              "\n"
              "[Events]\n"
