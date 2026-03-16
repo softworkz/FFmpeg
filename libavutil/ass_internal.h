@@ -62,16 +62,16 @@
  * @param border_style 1 for outline, 3 for opaque box
  * @param alignment position of the text (left, center, top...), defined after
  *                  the layout of the numpad (1-3 sub, 4-6 mid, 7-9 top)
+ * @param print_av_version whether to print the version
  * @return a string containing the subtitle header that needs
  *         to be released via av_free()
  */
-char *avpriv_ass_get_subtitle_header_full(AVCodecContext *avctx,
-                                          int play_res_x, int play_res_y,
+char *avpriv_ass_get_subtitle_header_full(int play_res_x, int play_res_y,
                                           const char *font, int font_size,
                                           int primary_color, int secondary_color,
                                           int outline_color, int back_color,
                                           int bold, int italic, int underline,
-                                          int border_style, int alignment);
+                                          int border_style, int alignment, int print_av_version);
 
 /**
  * Generate a suitable AVCodecContext.subtitle_header for SUBTITLE_ASS.

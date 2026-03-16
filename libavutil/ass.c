@@ -28,13 +28,12 @@
 #include "libavcodec/version.h"
 #include "libavcodec/avcodec.h"
 
-char *avpriv_ass_get_subtitle_header_full(AVCodecContext *avctx,
-                                          int play_res_x, int play_res_y,
+char *avpriv_ass_get_subtitle_header_full(int play_res_x, int play_res_y,
                                           const char *font, int font_size,
                                           int primary_color, int secondary_color,
                                           int outline_color, int back_color,
                                           int bold, int italic, int underline,
-                                          int border_style, int alignment)
+                                          int border_style, int alignment, int print_av_version)
 {
     char* header = av_asprintf(
              "[Script Info]\n"
@@ -72,7 +71,7 @@ char *avpriv_ass_get_subtitle_header_full(AVCodecContext *avctx,
              "\n"
              "[Events]\n"
              "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n",
-             (!avctx || !(avctx->flags & AV_CODEC_FLAG_BITEXACT)) ? AV_STRINGIFY(LIBAVCODEC_VERSION) : "",
+             print_av_version ? AV_STRINGIFY(LIBAVCODEC_VERSION) : "",
              play_res_x, play_res_y, font, font_size,
              primary_color, secondary_color, outline_color, back_color,
              -bold, -italic, -underline, border_style, alignment);
@@ -86,12 +85,11 @@ char* avpriv_ass_get_subtitle_header(const char *font, int font_size,
                            int border_style, int alignment,
                            int print_av_version)
 {
-    return avpriv_ass_get_subtitle_header_full(NULL,
-                                       ASS_DEFAULT_PLAYRESX, ASS_DEFAULT_PLAYRESY,
-                                       font, font_size, color, color,
-                                       back_color, back_color,
-                                       bold, italic, underline,
-                                       border_style, alignment);
+    return avpriv_ass_get_subtitle_header_full(ASS_DEFAULT_PLAYRESX, ASS_DEFAULT_PLAYRESY,
+                                               font, font_size, color, color,
+                                               back_color, back_color,
+                                               bold, italic, underline,
+                                               border_style, alignment, print_av_version);
 }
 
 char* avpriv_ass_get_subtitle_header_default(int print_av_version)

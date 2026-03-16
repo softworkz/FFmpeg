@@ -101,9 +101,9 @@ static int create_ass_header(AVFilterContext* ctx)
         s->h = ASS_DEFAULT_PLAYRESY;
     }
 
-    char* subtitle_header_text = avpriv_ass_get_subtitle_header_full(ctx, s->w, s->h, ASS_DEFAULT_FONT, ASS_DEFAULT_FONT_SIZE,
+    char* subtitle_header_text = avpriv_ass_get_subtitle_header_full(s->w, s->h, ASS_DEFAULT_FONT, ASS_DEFAULT_FONT_SIZE,
         ASS_DEFAULT_COLOR, ASS_DEFAULT_COLOR, ASS_DEFAULT_BACK_COLOR, ASS_DEFAULT_BACK_COLOR, ASS_DEFAULT_BOLD,
-        ASS_DEFAULT_ITALIC, ASS_DEFAULT_UNDERLINE, ASS_DEFAULT_BORDERSTYLE, ASS_DEFAULT_ALIGNMENT);
+        ASS_DEFAULT_ITALIC, ASS_DEFAULT_UNDERLINE, ASS_DEFAULT_BORDERSTYLE, ASS_DEFAULT_ALIGNMENT, 0);
 
     if (!subtitle_header_text)
         return AVERROR(ENOMEM);

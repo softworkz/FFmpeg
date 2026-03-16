@@ -39,10 +39,10 @@ static inline int ff_ass_subtitle_header_full(AVCodecContext *avctx,
                                               int bold, int italic, int underline,
                                               int border_style, int alignment)
 {
-    avctx->subtitle_header = (uint8_t *)avpriv_ass_get_subtitle_header_full(avctx,
-                                                                            play_res_x, play_res_y, font, font_size,
+    avctx->subtitle_header = (uint8_t *)avpriv_ass_get_subtitle_header_full(play_res_x, play_res_y, font, font_size,
                                                                             primary_color, secondary_color, outline_color,
-                                                                            back_color, bold, italic, underline, border_style, alignment);
+                                                                            back_color, bold, italic, underline, border_style, alignment,
+                                                                            (!avctx || !(avctx->flags & AV_CODEC_FLAG_BITEXACT)));
 
     if (!avctx->subtitle_header)
         return AVERROR(ENOMEM);
