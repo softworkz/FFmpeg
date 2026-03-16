@@ -180,6 +180,10 @@ static int ass_receive_packet(AVCodecContext *avctx, AVPacket *avpkt)
         s->current_area++;
     }
 
+    avpkt->pts      = av_rescale_q(s->current_frame->subtitle_timing.start_pts, AV_TIME_BASE_Q, avctx->time_base);
+    avpkt->duration = av_rescale_q(s->current_frame->subtitle_timing.duration, AV_TIME_BASE_Q, avctx->time_base);
+    avpkt->dts = avpkt->pts;
+
     if (s->current_area < s->current_frame->num_subtitle_areas)
         return 0;
 
