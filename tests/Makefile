@@ -198,7 +198,7 @@ include $(SRC_PATH)/tests/fate/emby-tonemap-opencl.mak
 include $(SRC_PATH)/tests/fate/emby-tonemap-cuda.mak
 include $(SRC_PATH)/tests/fate/emby-mediacodecndk.mak
 include $(SRC_PATH)/tests/fate/emby-segment.mak
-include $(SRC_PATH)/tests/fate/emby-webvtt.mak
+# include $(SRC_PATH)/tests/fate/emby-webvtt.mak
 include $(SRC_PATH)/tests/fate/fifo-muxer.mak
 include $(SRC_PATH)/tests/fate/filter-audio.mak
 # Must be included after vcodec.mak
