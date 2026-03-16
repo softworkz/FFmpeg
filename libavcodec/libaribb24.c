@@ -21,6 +21,7 @@
 
 #include "avcodec.h"
 #include "libavcodec/ass.h"
+#include "libavcodec/version.h"
 #include "codec_internal.h"
 #include "libavutil/log.h"
 #include "libavutil/mem.h"

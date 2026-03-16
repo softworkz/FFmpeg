@@ -25,7 +25,7 @@
 #include "libavutil/avstring.h"
 #include "libavutil/bprint.h"
 #include "libavutil/mem.h"
-#include "version.h"
+#include "libavcodec/version.h"
 #include "libavcodec/avcodec.h"
 
 char *avpriv_ass_get_subtitle_header_full(AVCodecContext *avctx,
